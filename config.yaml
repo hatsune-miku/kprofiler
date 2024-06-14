@@ -1,0 +1,15 @@
+# =================
+# KProfiler 配置文件
+# =================
+
+# 监控目标，如果是开黑啦则改为 Kaiheila.exe
+target: KOOK.exe
+
+# 每隔多少毫秒采样一次
+duration_millis: 1000
+
+# 数据输出文件名
+output_file: result.csv
+
+# 是否在监控过程中实时绘制图表，true 为开启，false 为关闭
+realtime_diagram: true
