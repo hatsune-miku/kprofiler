@@ -4,8 +4,9 @@ import time
 
 
 class ProcessKind(NamedTuple):
+    pid: int
     name: str
-    type: str
+    label: str
 
 
 class HistoryRecord(NamedTuple):
@@ -37,8 +38,13 @@ class History:
             )
         )
 
-    def get_latest(self, count: int) -> List[HistoryRecord]:
-        return self.records[-count:]
+    def get_latest(self, count: int, pid: Optional[int] = None) -> List[HistoryRecord]:
+        records = (
+            self.records
+            if pid is None
+            else [r for r in self.records if r.process.pid == pid]
+        )
+        return records[-count:]
 
     def save_to_csv(self, path: str, last_count: Optional[int]) -> None:
         records = self.get_latest(last_count) if last_count else self.records
@@ -49,8 +55,9 @@ class History:
                 process = record.process
                 row = {
                     "timestamp_seconds": record.timestamp_seconds,
+                    "process_id": process.pid,
                     "process_name": process.name,
-                    "process_type": process.type,
+                    "process_label": process.label,
                     "cpu_percent": record.cpu_percent,
                     "gpu_percent": record.gpu_percent,
                     "process_used_memory_mb": memory.process_used_memory_mb,

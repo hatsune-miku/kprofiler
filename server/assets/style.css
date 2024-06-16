@@ -1,0 +1,13 @@
+body {
+  background-color: #f0f0f0;
+}
+
+h1,
+h2 {
+  color: #333333;
+  font-family: Arial, sans-serif;
+}
+
+.graph-container {
+  margin-bottom: 20px;
+}

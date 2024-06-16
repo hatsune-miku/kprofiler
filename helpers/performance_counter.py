@@ -13,6 +13,7 @@ class COUNTERVALUE_DATA(ctypes.Union):
         ("WideStringValue", ctypes.c_wchar_p),
     ]
 
+
 class PDH_FMT_COUNTERVALUE(ctypes.Structure):
     _fields_ = [
         ("CStatus", ctypes.c_ulong),
@@ -168,7 +169,7 @@ class PerformanceCounter:
             if pid not in pid_to_gpu_percent_map:
                 pid_to_gpu_percent_map[pid] = counter_value.data.doubleValue
             else:
-                pid_to_gpu_percent_map[pid] = max(pid_to_gpu_percent_map[pid], counter_value.data.doubleValue)
+                pid_to_gpu_percent_map[pid] += counter_value.data.doubleValue
 
         self.pdh.PdhCloseQuery(query_handle)
         return pid_to_gpu_percent_map

@@ -1,7 +1,7 @@
 from .process_map import ProcessMap
 from .history import History, ProcessKind
 from helpers.config import Config
-from helpers.memory_helper import CPUHelper
+from helpers.memory_helper import CPUHelper, MemoryUtilization
 from helpers.performance_counter import PerformanceCounter
 from helpers.process_utils import ProcessUtils
 from threading import Thread
@@ -11,7 +11,12 @@ import time
 
 
 class KProfilerWorker:
-    def __init__(self, process_map: ProcessMap, config: Config, history: History):
+    def __init__(
+        self,
+        process_map: ProcessMap,
+        config: Config,
+        history: History,
+    ):
         self.thread = None
         self.config = config
         self.process_map = process_map
@@ -23,7 +28,7 @@ class KProfilerWorker:
         print(process_map)
 
     def start(self) -> None:
-        worker = self._make_worker(self.process_map.processes)
+        worker = self._make_worker()
         self.thread = Thread(target=worker)
         self.thread.start()
 
@@ -33,10 +38,16 @@ class KProfilerWorker:
     def notify_stop(self) -> None:
         self.should_stop = True
 
-    def _make_worker(self, processes: List[psutil.Process]) -> None:
+    def set_process_map(self, process_map: ProcessMap) -> None:
+        self.process_map = process_map
+
+    def _make_worker(self) -> None:
         def _worker():
             while not self.should_stop:
-                self._capture_profile(processes)
+                try:
+                    self._capture_profile(self.process_map.processes)
+                except:
+                    print("Waiting for processes to start...")
 
                 # -2 即少等 2s，这是因为 psutil + performance_counter 至少要消耗 2s 才能获取到数据
                 time.sleep(max(0, self.config.duration_millis / 1000.0 - 2))
@@ -49,25 +60,52 @@ class KProfilerWorker:
         cpu_percents = ProcessUtils.get_processes_cpu_percent(processes)
         count = len(processes)
 
+        cpu_percent_total = 0
+        gpu_percent_total = 0
+        system_total_memory_mb_total = 0
+        process_used_memory_mb_total = 0
+        system_free_memory_mb_total = 0
+
         for i, process in enumerate(processes):
             memory_utilization = self.cpu_helper.query_process(process.pid)
             cpu_percent = cpu_percents[i]
             gpu_percent = pid_to_gpu_percent.get(process.pid, 0)
             process_kind = ProcessKind(
+                pid=process.pid,
                 name=self.config.target,
-                type=self.process_map.get_label(process.pid),
+                label=self.process_map.get_label(process.pid),
             )
+            cpu_percent_total += cpu_percent
+            gpu_percent_total += gpu_percent
+            system_total_memory_mb_total += memory_utilization.system_total_memory_mb
+            process_used_memory_mb_total += memory_utilization.process_used_memory_mb
+            system_free_memory_mb_total += memory_utilization.system_free_memory_mb
             self.history.add_record(
                 process=process_kind,
                 memory_utilization=memory_utilization,
                 cpu_percent=cpu_percent,
                 gpu_percent=gpu_percent,
             )
+        self.history.add_record(
+            process=ProcessKind(pid=0, name=self.config.target, label="总值"),
+            memory_utilization=MemoryUtilization(
+                system_total_memory_mb=system_total_memory_mb_total,
+                process_used_memory_mb=process_used_memory_mb_total,
+                system_free_memory_mb=system_free_memory_mb_total,
+            ),
+            cpu_percent=cpu_percent_total,
+            gpu_percent=gpu_percent_total,
+        )
 
         if self.should_stop:
             return
-        
-        self.history.save_to_csv(f"history-{self.config.target}.csv", last_count=count)
 
-        now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        print(f"{now} - {count} records saved to history-{self.config.target}.csv")
+        if self.config.write_logs:
+            self.history.save_to_csv(
+                f"history-{self.config.target}.csv", last_count=count
+            )
+
+            now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+            print(
+                f"{now} - {count} record(s) saved to history-{self.config.target}.csv"
+            )

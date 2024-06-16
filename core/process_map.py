@@ -3,6 +3,7 @@ from typing import List
 from helpers.config import Config
 from prettytable import PrettyTable
 
+
 class ProcessMap:
     def __init__(self, processes: List[Process], config: Config) -> None:
         self.pid_to_label = {}
@@ -14,18 +15,20 @@ class ProcessMap:
             labelled = False
             for criterion in criteria:
                 self.available_labels.add(criterion.label)
-                cmdline = ' '.join(process.cmdline())
+                cmdline = " ".join(process.cmdline())
                 if criterion.keyword in cmdline:
                     self.pid_to_label[process.pid] = criterion.label
                     labelled = True
                     break
             if not labelled:
-                self.available_labels.add('主进程')
-                self.pid_to_label[process.pid] = '主进程'
-    
+                self.available_labels.add("主进程")
+                self.pid_to_label[process.pid] = "主进程"
+
     def get_label(self, pid: int) -> str:
+        if pid == 0:
+            return "总值"
         return self.pid_to_label.get(pid)
-    
+
     @property
     def labels(self) -> List[str]:
         return list(self.available_labels)

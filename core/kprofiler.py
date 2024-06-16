@@ -8,24 +8,43 @@ from typing import List
 
 
 class KProfiler:
-    def __init__(self) -> None:
-        self.worker = None
-        self.history = History()
-
-    def start(self) -> None:
-        config = self.load_config()
-        target = config.target
-        processes = self.list_processes(target)
-        process_map = ProcessMap(processes, config)
-        self.worker = KProfilerWorker(process_map, config, self.history)
-        self.worker.start()
-
-    def load_config(self) -> Config:
+    @staticmethod
+    def load_config() -> Config:
         try:
             return Config("config.yaml")
         except:
             print("配置文件加载失败，请确保 config.yaml 存在于 main.py 旁边")
             exit(1)
+
+    def __init__(self, history: History) -> None:
+        self.history = history
+        self.config = self.load_config()
+        self.worker: KProfilerWorker = None
+        self.subscribers = []
+        self.reload_processes()
+
+    def reload_processes(self) -> None:
+        self.processes = self.list_processes(self.config.target)
+        self.process_map: ProcessMap = None
+        try:
+            self.process_map = ProcessMap(self.processes, self.config)
+            if self.worker is not None:
+                self.worker.set_process_map(self.process_map)
+            for subscriber in self.subscribers:
+                subscriber(self.process_map)
+        except:
+            print(f"权限不足，无法访问进程 {self.config.target}，快使出万能的sudo啊！")
+            print(
+                "备注：Windows下使用sudo - https://github.com/gerardog/gsudo?tab=readme-ov-file#installation"
+            )
+            ProcessUtils.exit_immediately()
+
+    def subscribe_to_reload(self, callback) -> None:
+        self.subscribers.append(callback)
+
+    def start(self) -> None:
+        self.worker = KProfilerWorker(self.process_map, self.config, self.history)
+        self.worker.start()
 
     def notify_stop(self) -> None:
         self.worker.notify_stop()
@@ -34,8 +53,4 @@ class KProfiler:
         self.worker.wait_all()
 
     def list_processes(self, target: str) -> List[Process]:
-        processes = ProcessUtils.get_processes_by_name(target)
-        if len(processes) == 0:
-            print(f"没找到 {target} 进程，请先运行 {target} 再运行本程序")
-            exit(1)
-        return processes
+        return ProcessUtils.get_processes_by_name(target)
