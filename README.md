@@ -20,9 +20,9 @@ pip install -r requirements.txt
 
 ### 2. 启动 html_pc 项目
 
-### 3. （可以跳过）修改配置文件 `config.yaml`
+### 3. 修改配置文件 `config.yaml`
 
-点开 `config.yaml` 文件后，按注释修改配置文件。
+目前监控的是微信的进程名，要根据实际情况改成自己想要监控的进程。
 
 ### 4. 启动 KProfiler
 
