@@ -4,10 +4,19 @@ import re
 from typing import List, Dict
 
 
+class COUNTERVALUE_DATA(ctypes.Union):
+    _fields_ = [
+        ("longValue", ctypes.c_long),
+        ("doubleValue", ctypes.c_double),
+        ("largeValue", ctypes.c_longlong),
+        ("AnsiStringValue", ctypes.c_char_p),
+        ("WideStringValue", ctypes.c_wchar_p),
+    ]
+
 class PDH_FMT_COUNTERVALUE(ctypes.Structure):
     _fields_ = [
         ("CStatus", ctypes.c_ulong),
-        ("doubleValue", ctypes.c_double),
+        ("data", COUNTERVALUE_DATA),
     ]
 
 
@@ -156,7 +165,7 @@ class PerformanceCounter:
             )
             instance = str(instance)
             pid = self._pid_from_instance(instance)
-            pid_to_gpu_percent_map[pid] = counter_value.doubleValue
+            pid_to_gpu_percent_map[pid] = counter_value.data.doubleValue
 
         self.pdh.PdhCloseQuery(query_handle)
         return pid_to_gpu_percent_map
