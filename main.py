@@ -7,6 +7,7 @@
 # 4，写入本地文件，结束后针对数据总值 绘制曲线图（能做成实时绘制的那就更好啦）
 
 from core.kprofiler import KProfiler
+from helpers.process_utils import ProcessUtils
 import signal
 
 
@@ -16,7 +17,8 @@ def make_signal_interrupt_handler(profiler: KProfiler):
     """
 
     def h(sig, frame):
-        print("Interrupt signalled, stopping...")
+        print("Interrupted by user, stopping...")
+        ProcessUtils.exit_immediately()
         profiler.notify_stop()
         profiler.wait_all()
         exit(0)

@@ -1,5 +1,7 @@
 import psutil
 import time
+import os
+import signal
 from typing import List
 
 
@@ -15,8 +17,13 @@ class ProcessUtils:
         count = len(processes)
         cpu_percents = [0] * count
         for i, p in enumerate(processes):
-            cpu_percents[i] = p.cpu_percent()
+            cpu_percents[i] = max(cpu_percents[i], p.cpu_percent())
         time.sleep(sample_seconds)
         for i, p in enumerate(processes):
-            cpu_percents[i] = p.cpu_percent()
+            cpu_percents[i] = max(cpu_percents[i], p.cpu_percent())
         return cpu_percents
+
+    @staticmethod
+    def exit_immediately():
+        os.kill(os.getpid(), 9)
+        os._exit(0)

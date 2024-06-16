@@ -2,12 +2,12 @@
 # KProfiler 配置文件
 # =================
 
-# 监控目标，如果是开黑啦则改为 Kaiheila.exe
-target: Code.exe
+# 监控目标，大小写要注意区分。如果是开黑啦则改为 Kaiheila.exe
+target: dwm.exe
 
 # 每隔多少毫秒采样一次
 duration_millis: 1000
-
+ 
 # 数据输出文件名
 output_file: result.csv
 

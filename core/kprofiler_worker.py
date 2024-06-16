@@ -63,6 +63,10 @@ class KProfilerWorker:
                 cpu_percent=cpu_percent,
                 gpu_percent=gpu_percent,
             )
+
+        if self.should_stop:
+            return
+        
         self.history.save_to_csv(f"history-{self.config.target}.csv", last_count=count)
 
         now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
