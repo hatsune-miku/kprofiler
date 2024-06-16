@@ -13,3 +13,21 @@ output_file: result.csv
 
 # 是否在监控过程中实时绘制图表，true 为开启，false 为关闭
 realtime_diagram: true
+
+# 以下为进阶配置
+advanced:
+  label_criteria:
+    - keyword: --type=renderer
+      label: 渲染进程
+
+    - keyword: --type=crashpad-handler
+      label: crashpad-handler
+
+    - keyword: --type=utility
+      label: utility
+
+    - keyword: --type=gpu-process
+      label: GPU 进程
+
+    - keyword: km-event-child-process.js
+      label: km-event

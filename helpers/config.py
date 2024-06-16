@@ -1,6 +1,7 @@
 import yaml
 import os
-from typing import Optional
+from typing import Optional, List
+from .label_criterion import LabelCriterion
 
 class Config:
     def __init__(self, config_file: str):
@@ -18,5 +19,26 @@ class Config:
     def __getitem__(self, key: str):
         return self.config.get(key)
 
-    def get_target(self, default_value: Optional[str] = None) -> str:
-        return self['target'] or default_value
+    @property
+    def target(self) -> str:
+        return self['target']
+
+    @property
+    def duration_millis(self) -> int:
+        return self['duration_millis']
+
+    @property
+    def output_file(self) -> str:
+        return self['output_file']
+
+    @property
+    def realtime_diagram(self) -> bool:
+        return self['realtime_diagram']
+
+    @property
+    def label_criteria(self) -> List[LabelCriterion]:
+        criteria = self['advanced']['label_criteria']
+        ret = []
+        for criterion in criteria:
+            ret.append(LabelCriterion(criterion['keyword'], criterion['label']))
+        return ret
