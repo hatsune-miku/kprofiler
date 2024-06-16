@@ -3,7 +3,7 @@
 # =================
 
 # 监控目标，如果是开黑啦则改为 Kaiheila.exe
-target: KOOK.exe
+target: Code.exe
 
 # 每隔多少毫秒采样一次
 duration_millis: 1000

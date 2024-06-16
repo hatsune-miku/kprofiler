@@ -2,6 +2,7 @@ from helpers.config import Config
 from helpers.process_utils import ProcessUtils
 from core.kprofiler_worker import KProfilerWorker
 from core.process_map import ProcessMap
+from core.history import History
 from psutil import Process
 from typing import List
 
@@ -9,13 +10,14 @@ from typing import List
 class KProfiler:
     def __init__(self) -> None:
         self.worker = None
+        self.history = History()
 
     def start(self) -> None:
         config = self.load_config()
         target = config.target
         processes = self.list_processes(target)
         process_map = ProcessMap(processes, config)
-        self.worker = KProfilerWorker(process_map, config)
+        self.worker = KProfilerWorker(process_map, config, self.history)
         self.worker.start()
 
     def load_config(self) -> Config:
