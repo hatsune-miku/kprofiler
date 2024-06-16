@@ -48,8 +48,8 @@ class PerformanceCounter:
         pdh.PdhGetFormattedCounterValue.restype = ctypes.c_uint
         pdh.PdhGetFormattedCounterValue.argtypes = [
             ctypes.c_void_p,
-            ctypes.c_uint,
-            ctypes.POINTER(ctypes.c_uint),
+            ctypes.c_ulong,
+            ctypes.POINTER(ctypes.c_ulong),
             ctypes.POINTER(PDH_FMT_COUNTERVALUE),
         ]
 
@@ -154,7 +154,7 @@ class PerformanceCounter:
         start = time.time()
         for instance, counter_handle in counter_handles:
             counter_value = PDH_FMT_COUNTERVALUE()
-            counter_type = ctypes.c_uint()
+            counter_type = ctypes.c_ulong()
             self._assert_status(
                 self.pdh.PdhGetFormattedCounterValue(
                     counter_handle,
@@ -164,8 +164,11 @@ class PerformanceCounter:
                 )
             )
             instance = str(instance)
-            pid = self._pid_from_instance(instance)
-            pid_to_gpu_percent_map[pid] = counter_value.data.doubleValue
+            pid = self._pid_from_instance(instance=instance)
+            if pid not in pid_to_gpu_percent_map:
+                pid_to_gpu_percent_map[pid] = counter_value.data.doubleValue
+            else:
+                pid_to_gpu_percent_map[pid] = max(pid_to_gpu_percent_map[pid], counter_value.data.doubleValue)
 
         self.pdh.PdhCloseQuery(query_handle)
         return pid_to_gpu_percent_map
