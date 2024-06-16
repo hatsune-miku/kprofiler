@@ -36,7 +36,6 @@ class DashServer:
         self.set_process_map(process_map)
 
     def set_process_map(self, process_map: ProcessMap) -> None:
-        print(process_map)
         self.process_map = process_map
         self.process_labels = process_map.available_labels
         self.processes = [DummyProcess(self.config.target)] + process_map.processes
