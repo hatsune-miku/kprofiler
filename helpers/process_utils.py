@@ -1,7 +1,6 @@
 import psutil
 import time
 import os
-import signal
 from typing import List
 
 
