@@ -20,30 +20,33 @@ class KProfiler:
         self.history = history
         self.config = self.load_config()
         self.worker: KProfilerWorker = None
+        self.process_map = ProcessMap([], self.config)
         self.subscribers = []
-        self.reload_processes()
+        self.last_processes = []
+        self.reload_processes(skip_optimization=True)
 
-    def reload_processes(self) -> None:
-        self.processes = self.list_processes(self.config.target)
-        self.process_map: ProcessMap = None
-        try:
-            self.process_map = ProcessMap(self.processes, self.config)
-            if self.worker is not None:
-                self.worker.set_process_map(self.process_map)
-            for subscriber in self.subscribers:
-                subscriber(self.process_map)
-        except:
-            print(f"权限不足，无法访问进程 {self.config.target}，快使出万能的sudo啊！")
-            print(
-                "备注：Windows下使用sudo - https://github.com/gerardog/gsudo?tab=readme-ov-file#installation"
-            )
-            ProcessUtils.exit_immediately()
-
-    def subscribe_to_reload(self, callback) -> None:
+    def subscribe_to_process_change(self, callback) -> None:
         self.subscribers.append(callback)
 
+    def trigger_subscribers(self) -> None:
+        for subscriber in self.subscribers:
+            subscriber()
+
+    def reload_processes(self, skip_optimization: bool = False) -> None:
+        processes = self.list_processes(self.config.target)
+        if not skip_optimization:
+            if self._is_processes_equal(self.last_processes, processes):
+                # 进程列表未发生变化，无需重新加载
+                return
+            self.last_processes = processes
+        self.processes = processes
+        self.process_map.update_processes(self.processes)
+        self.trigger_subscribers()
+
     def start(self) -> None:
-        self.worker = KProfilerWorker(self.process_map, self.config, self.history)
+        self.worker = KProfilerWorker(
+            self.process_map, self.config, self.history, self.reload_processes
+        )
         self.worker.start()
 
     def notify_stop(self) -> None:
@@ -54,3 +57,14 @@ class KProfiler:
 
     def list_processes(self, target: str) -> List[Process]:
         return ProcessUtils.get_processes_by_name(target)
+
+    @staticmethod
+    def _is_processes_equal(p1: List[Process], p2: List[Process]) -> bool:
+        if len(p1) != len(p2):
+            return False
+        p1.sort(key=lambda x: x.pid)
+        p2.sort(key=lambda x: x.pid)
+        for i in range(0, len(p1)):
+            if p1[i].pid != p2[i].pid:
+                return False
+        return True

@@ -24,15 +24,15 @@ def main():
     history = History()
     profiler = KProfiler(history)
     profiler.start()
-    signal.signal(signal.SIGINT, make_signal_interrupt_handler(profiler))
 
     if profiler.config.realtime_diagram:
-        webbrowser.open(f"http://127.0.0.1:{profiler.config.port}", autoraise=True)
+        signal.signal(signal.SIGINT, make_signal_interrupt_handler(profiler))
         server = DashServer(history, profiler.process_map, profiler.config)
-        profiler.subscribe_to_reload(
-            lambda process_map: server.set_process_map(process_map)
-        )
-        server.start()
+        profiler.subscribe_to_process_change(server.notify_processes_updated)
+        profiler.trigger_subscribers()
+        webbrowser.open(f"http://127.0.0.1:{profiler.config.port}", autoraise=True)
+    else:
+        signal.signal(signal.SIGINT, make_signal_interrupt_handler(profiler))
 
 
 if __name__ == "__main__":

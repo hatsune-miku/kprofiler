@@ -5,7 +5,7 @@ from helpers.memory_helper import CPUHelper, MemoryUtilization
 from helpers.performance_counter import PerformanceCounter
 from helpers.process_utils import ProcessUtils
 from threading import Thread
-from typing import List
+from typing import List, Any
 import psutil
 import time
 
@@ -16,6 +16,7 @@ class KProfilerWorker:
         process_map: ProcessMap,
         config: Config,
         history: History,
+        emit_reload: Any,
     ):
         self.thread = None
         self.config = config
@@ -25,6 +26,7 @@ class KProfilerWorker:
         self.performance_counter = PerformanceCounter()
         self.should_stop = False
         self.thread = None
+        self.emit_reload = emit_reload
         print(process_map)
 
     def start(self) -> None:
@@ -47,9 +49,11 @@ class KProfilerWorker:
                 try:
                     self._capture_profile(self.process_map.processes)
                 except:
-                    print("Waiting for processes to start...")
+                    pass
 
-                # -2 即少等 2s，这是因为 psutil + performance_counter 至少要消耗 2s 才能获取到数据
+                self.emit_reload()
+
+                # -2 即少等 2s，这是因为 psutil 和 performance_counter 至少要消耗 2s 才能获取到数据
                 time.sleep(max(0, self.config.duration_millis / 1000.0 - 2))
 
         return _worker
