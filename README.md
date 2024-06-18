@@ -28,8 +28,6 @@ pip install -r requirements.txt
 
 ```bash
 python main.py
-# 或者双击 start.bat
-# 或者右键 start.bat 然后管理员权限运行
 ```
 
 ## Demo
