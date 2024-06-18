@@ -3,13 +3,14 @@ import logging
 import dash
 import plotly.graph_objs as go
 import sys
-from dash import dcc, html
-from dash.dependencies import Input, Output
+from dash import dcc, html, ClientsideFunction
+from dash.dependencies import Input, Output, State
 
 from typing import List, Tuple
 from core.history import History
 from core.process_map import ProcessMap
 from helpers.config import Config
+from helpers.process_utils import ProcessUtils
 from psutil import Process
 from threading import Thread
 from flask import request, Flask
@@ -71,6 +72,7 @@ class DashServer:
         self.process_map = process_map
         self.dash: dash.Dash = None
         self.server: FlaskServer = None
+        self.refresh_flag = False
         self.processes: List[Process] = []
         self.process_labels = set()
         self._update_internal_processes()
@@ -86,6 +88,10 @@ class DashServer:
         self._register_callbacks()
         self.server = FlaskServer(self.flask, self.dash, self.config)
         self.server.start()
+        self.request_refresh()
+
+    def request_refresh(self):
+        self.refresh_flag = True
 
     def _update_internal_processes(self):
         self.process_labels = self.process_map.available_labels
@@ -148,7 +154,7 @@ class DashServer:
                     )
                 )
                 fig.update_layout(
-                    title=f"{pid} 使用率数据",
+                    title="使用率数据",
                     xaxis_title="时间",
                     yaxis_title="使用率 %",
                 )
@@ -167,7 +173,7 @@ class DashServer:
                     )
                 )
                 fig.update_layout(
-                    title=f"{pid} RAM使用情况",
+                    title="RAM使用情况",
                     xaxis_title="时间",
                     yaxis_title="已用RAM (MB)",
                 )
@@ -185,7 +191,19 @@ class DashServer:
             update_title="\\^O^/",
             suppress_callback_exceptions=True,
         )
+
         graphs = []
+        graphs.append(
+            html.Div(
+                [
+                    html.H2("控制面板"),
+                    html.Button("结束程序", id="button-exit", n_clicks=0),
+                    html.Button("刷新页面", id="button-refresh", n_clicks=0),
+                    html.Div(id="exit", style={"display": "none"}),
+                ]
+            )
+        )
+
         for process in self.processes:
             name = process.name()
             pid = process.pid
@@ -193,7 +211,11 @@ class DashServer:
             graphs.append(
                 html.Div(
                     [
-                        html.H2(f"{name} ({pid}, {label}) 数据"),
+                        html.H2(
+                            f"{name} {label} (PID={pid}) 数据"
+                            if pid != 0
+                            else f"{name} 总值"
+                        ),
                         dcc.Graph(id=f"live-update-graph-{pid}-percents"),
                         dcc.Graph(id=f"live-update-graph-{pid}-data"),
                     ]
@@ -220,4 +242,36 @@ class DashServer:
                 ),
             ]
         )
+        dash_app.clientside_callback(
+            ClientsideFunction("main", function_name="exit_program"),
+            Output("exit", "children"),
+            [Input("button-exit", "n_clicks")],
+        )
+        dash_app.clientside_callback(
+            ClientsideFunction("main", function_name="refresh_page"),
+            [Input("button-refresh", "n_clicks")],
+        )
+        dash_app.clientside_callback(
+            ClientsideFunction("main", function_name="refresh_page"),
+            [Input("button-refresh", "n_clicks")],
+        )
+
+        @dash_app.callback(
+            [Output("button-refresh", "n_clicks")],
+            [Input("interval-refresh-layout", "n_intervals")],
+        )
+        def poll_refresh(n_intervals):
+            if self.refresh_flag:
+                self.refresh_flag = False
+                return [1]
+            else:
+                return [0]
+
+        @dash_app.callback(
+            [Input("exit", "children")],
+        )
+        def exit_button_callback(n_clicks):
+            if n_clicks > 0:
+                ProcessUtils.exit_immediately()
+
         return flask_app, dash_app

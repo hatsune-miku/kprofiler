@@ -1,13 +1,34 @@
 body {
   background-color: #f0f0f0;
+  padding: 24px;
 }
 
 h1,
 h2 {
   color: #333333;
-  font-family: Arial, sans-serif;
+  font-family: PingFang SC, Microsoft YaHei, Inter, Arial, sans-serif;
 }
 
-.graph-container {
-  margin-bottom: 20px;
+.dash-graph {
+  border-radius: 18px;
+  overflow: hidden;
+  margin: 6px 12px;
+  padding: 0 12px;
+  background-color: white;
+  transition: box-shadow 0.5s ease;
+
+  &:hover {
+    transition: box-shadow 0.5s ease;
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.2);
+  }
+}
+
+button {
+  margin: 4px;
+  padding: 8px;
+  border-radius: 12px;
+
+  &:hover {
+    background-color: lightgray;
+  }
 }
