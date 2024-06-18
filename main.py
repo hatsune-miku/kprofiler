@@ -8,7 +8,7 @@ import webbrowser
 
 
 def main():
-    history = History()
+    history = History(history_upperbound=5000)
     profiler = KProfiler(history)
     profiler.start()
 

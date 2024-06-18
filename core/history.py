@@ -18,8 +18,9 @@ class HistoryRecord(NamedTuple):
 
 
 class History:
-    def __init__(self) -> None:
+    def __init__(self, history_upperbound: int) -> None:
         self.records: List[HistoryRecord] = []
+        self.history_upperbound = history_upperbound
 
     def add_record(
         self,
@@ -37,6 +38,8 @@ class History:
                 gpu_percent,
             )
         )
+        if len(self.records) > self.history_upperbound:
+            self.records = self.records[-self.history_upperbound :]
 
     def get_latest(self, count: int, pid: Optional[int] = None) -> List[HistoryRecord]:
         records = (

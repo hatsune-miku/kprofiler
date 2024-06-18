@@ -45,6 +45,10 @@ class Config:
         return self["advanced"]["port"]
 
     @property
+    def history_upperbound(self) -> int:
+        return self["advanced"]["history_upperbound"]
+
+    @property
     def label_criteria(self) -> List[LabelCriterion]:
         criteria = self["advanced"]["label_criteria"]
         ret = []

@@ -28,6 +28,8 @@ advanced:
   # 默认：6308
   port: 6308
 
+  history_upperbound: 5000
+
   label_criteria:
     - keyword: --type=renderer
       label: 渲染进程
