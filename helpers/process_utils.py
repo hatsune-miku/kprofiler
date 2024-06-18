@@ -16,10 +16,10 @@ class ProcessUtils:
         count = len(processes)
         cpu_percents = [0] * count
         for i, p in enumerate(processes):
-            cpu_percents[i] = max(cpu_percents[i], p.cpu_percent())
+            cpu_percents[i] = max(cpu_percents[i], p.cpu_percent() / psutil.cpu_count())
         time.sleep(sample_seconds)
         for i, p in enumerate(processes):
-            cpu_percents[i] = max(cpu_percents[i], p.cpu_percent())
+            cpu_percents[i] = max(cpu_percents[i], p.cpu_percent() / psutil.cpu_count())
         return cpu_percents
 
     @staticmethod
