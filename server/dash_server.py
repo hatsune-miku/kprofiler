@@ -36,7 +36,10 @@ class FlaskServer:
         self.server_thread.start()
 
         def _start_dash_app():
-            self.app.run(debug=False, use_reloader=False)
+            self.app.run(
+                debug=False,
+                use_reloader=False,
+            )
 
         self.dash_thread = Thread(target=_start_dash_app)
         self.dash_thread.start()
@@ -180,6 +183,7 @@ class DashServer:
             assets_folder="assets",
             title="KProfiler",
             update_title="\\^O^/",
+            suppress_callback_exceptions=True,
         )
         graphs = []
         for process in self.processes:
