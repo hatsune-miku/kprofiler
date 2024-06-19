@@ -10,16 +10,28 @@ class ProcessUtils:
         return [p for p in psutil.process_iter() if name == p.name()]
 
     @staticmethod
+    def get_process_cpu_percent(process: psutil.Process) -> float:
+        percent = process.cpu_percent()
+        if percent > 100:
+            percent /= psutil.cpu_count(logical=False)
+        return percent
+
+    @staticmethod
     def get_processes_cpu_percent(
         processes: List[psutil.Process], sample_seconds: int = 1
     ) -> List[float]:
         count = len(processes)
+        cpu_count_physical = psutil.cpu_count(logical=False)
         cpu_percents = [0] * count
         for i, p in enumerate(processes):
-            cpu_percents[i] = max(cpu_percents[i], p.cpu_percent() / psutil.cpu_count())
+            cpu_percents[i] = max(
+                cpu_percents[i], ProcessUtils.get_process_cpu_percent(p)
+            )
         time.sleep(sample_seconds)
         for i, p in enumerate(processes):
-            cpu_percents[i] = max(cpu_percents[i], p.cpu_percent() / psutil.cpu_count())
+            cpu_percents[i] = max(
+                cpu_percents[i], ProcessUtils.get_process_cpu_percent(p)
+            )
         return cpu_percents
 
     @staticmethod

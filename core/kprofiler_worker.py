@@ -81,9 +81,9 @@ class KProfilerWorker:
             )
             cpu_percent_total += cpu_percent
             gpu_percent_total += gpu_percent
-            system_total_memory_mb_total += memory_utilization.system_total_memory_mb
+            system_total_memory_mb_total = memory_utilization.system_total_memory_mb
             process_used_memory_mb_total += memory_utilization.process_used_memory_mb
-            system_free_memory_mb_total += memory_utilization.system_free_memory_mb
+            system_free_memory_mb_total = memory_utilization.system_free_memory_mb
             self.history.add_record(
                 process=process_kind,
                 memory_utilization=memory_utilization,
