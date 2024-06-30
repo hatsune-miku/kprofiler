@@ -17,13 +17,14 @@ page_update_interval: 1000
 # 默认：true
 realtime_diagram: true
 
-#
+# 未在计时的时候，最多保留多少条记录
+# 默认：100
 latest_record_count: 100
 
 # 是否将监控结果写入日志文件，true 为开启，false 为关闭
 # 写出日志将会产生非常大的数据，会影响固态硬盘寿命
 # 默认：true
-write_logs: false
+write_logs: true
 
 # 以下为进阶配置
 advanced:
@@ -31,10 +32,13 @@ advanced:
   # 默认：6308
   port: 6308
 
-  history_upperbound: 5000
+  # 内存中最多保留多少条记录
+  history_upperbound: 50000
 
+  # 后台线程多久重新加载一次 GPU 百分比的数据，单位：毫秒
   gpu_duration_millis: 1000
 
+  # 启动参数中包含什么样的关键字，将其标记为什么样的进程
   label_criteria:
     - keyword: --type=renderer
       label: 渲染进程
