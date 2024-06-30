@@ -33,6 +33,10 @@ class Config:
         return self["realtime_diagram"]
 
     @property
+    def latest_record_count(self) -> int:
+        return self["latest_record_count"]
+
+    @property
     def page_update_interval(self) -> int:
         return self["page_update_interval"]
 

@@ -119,7 +119,9 @@ class DashServer:
 
     def _make_callback_for(self, pid: int, is_percent_data: bool):
         def callback(n: int) -> go.Figure:
-            latest_records = self.history.get_latest(100, pid)
+            latest_records = self.history.get_latest(
+                self.config.latest_record_count, pid
+            )
             if not latest_records:
                 return go.Figure()
 
@@ -159,23 +161,68 @@ class DashServer:
                     yaxis_title="使用率 %",
                 )
             else:
-                memory_utilizations = [
-                    record.memory_utilization.process_used_memory_mb
-                    for record in latest_records
-                ]
+                uss_list = []
+                rss_list = []
+                wset_list = []
+                pwset_list = []
+                vms_list = []
+                for record in latest_records:
+                    memory = record.memory_utilization
+                    uss_list.append(memory.uss_mb)
+                    rss_list.append(memory.rss_mb)
+                    wset_list.append(memory.wset_mb)
+                    pwset_list.append(memory.pwset_mb)
+                    vms_list.append(memory.vms_mb)
+
                 fig.add_trace(
                     go.Scatter(
                         x=timestamps,
-                        y=memory_utilizations,
+                        y=wset_list,
                         mode="lines+markers",
-                        name="Memory Utilization (MB)",
+                        name="专用内存 (uss) 大小 (MB)",
+                        line=dict(color="rgb(135, 235, 0)"),
+                    )
+                )
+                fig.add_trace(
+                    go.Scatter(
+                        x=timestamps,
+                        y=wset_list,
+                        mode="lines+markers",
+                        name="私有+共享工作集 (wset) 大小 (MB)",
+                        line=dict(color="rgb(251, 196, 33)"),
+                    )
+                )
+                fig.add_trace(
+                    go.Scatter(
+                        x=timestamps,
+                        y=pwset_list,
+                        mode="lines+markers",
+                        name="私有工作集 (private) 大小 (MB)",
+                        line=dict(color="#39c5bb"),
+                    )
+                )
+                fig.add_trace(
+                    go.Scatter(
+                        x=timestamps,
+                        y=rss_list,
+                        mode="lines+markers",
+                        name="驻留集 (rss) 大小 (MB)",
                         line=dict(color="#fb7299"),
+                    )
+                )
+                fig.add_trace(
+                    go.Scatter(
+                        x=timestamps,
+                        y=vms_list,
+                        mode="lines+markers",
+                        name="虚拟内存 (vms) 大小 (MB)",
+                        line=dict(color="#66ccff"),
                     )
                 )
                 fig.update_layout(
                     title="RAM使用情况",
                     xaxis_title="时间",
-                    yaxis_title="已用RAM (MB)",
+                    yaxis_title="已用 (MB)",
                 )
             return fig
 
@@ -251,10 +298,6 @@ class DashServer:
             ClientsideFunction("main", function_name="refresh_page"),
             [Input("button-refresh", "n_clicks")],
         )
-        dash_app.clientside_callback(
-            ClientsideFunction("main", function_name="refresh_page"),
-            [Input("button-refresh", "n_clicks")],
-        )
 
         @dash_app.callback(
             [Output("button-refresh", "n_clicks")],
@@ -264,8 +307,7 @@ class DashServer:
             if self.refresh_flag:
                 self.refresh_flag = False
                 return [1]
-            else:
-                return [0]
+            return [0]
 
         @dash_app.callback(
             [Input("exit", "children")],

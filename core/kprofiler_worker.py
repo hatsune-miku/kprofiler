@@ -97,8 +97,12 @@ class KProfilerWorker:
         cpu_percent_total = 0
         gpu_percent_total = 0
         system_total_memory_mb_total = 0
-        process_used_memory_mb_total = 0
         system_free_memory_mb_total = 0
+        uss_mb_total = 0
+        rss_mb_total = 0
+        vms_mb_total = 0
+        wset_mb_total = 0
+        pwset_mb_total = 0
 
         for i, process in enumerate(processes):
             memory_utilization = self.cpu_helper.query_process(process)
@@ -109,11 +113,18 @@ class KProfilerWorker:
                 name=self.config.target,
                 label=self.process_map.get_label(process.pid),
             )
+
+            system_total_memory_mb_total = memory_utilization.system_total_memory_mb
+            system_free_memory_mb_total = memory_utilization.system_free_memory_mb
+
             cpu_percent_total += cpu_percent
             gpu_percent_total += gpu_percent
-            system_total_memory_mb_total = memory_utilization.system_total_memory_mb
-            process_used_memory_mb_total += memory_utilization.process_used_memory_mb
-            system_free_memory_mb_total = memory_utilization.system_free_memory_mb
+            uss_mb_total += memory_utilization.uss_mb
+            rss_mb_total += memory_utilization.rss_mb
+            vms_mb_total += memory_utilization.vms_mb
+            wset_mb_total += memory_utilization.wset_mb
+            pwset_mb_total += memory_utilization.pwset_mb
+
             self.history.add_record(
                 process=process_kind,
                 memory_utilization=memory_utilization,
@@ -124,8 +135,12 @@ class KProfilerWorker:
             process=ProcessKind(pid=0, name=self.config.target, label="总值"),
             memory_utilization=MemoryUtilization(
                 system_total_memory_mb=system_total_memory_mb_total,
-                process_used_memory_mb=process_used_memory_mb_total,
                 system_free_memory_mb=system_free_memory_mb_total,
+                uss_mb=uss_mb_total,
+                rss_mb=rss_mb_total,
+                vms_mb=vms_mb_total,
+                wset_mb=wset_mb_total,
+                pwset_mb=pwset_mb_total,
             ),
             cpu_percent=cpu_percent_total,
             gpu_percent=gpu_percent_total,

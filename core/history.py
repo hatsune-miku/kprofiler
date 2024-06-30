@@ -63,7 +63,11 @@ class History:
                     "process_label": process.label,
                     "cpu_percent": record.cpu_percent,
                     "gpu_percent": record.gpu_percent,
-                    "process_used_memory_mb": memory.process_used_memory_mb,
+                    "uss_mb": memory.uss_mb,
+                    "rss_mb": memory.rss_mb,
+                    "vms_mb": memory.vms_mb,
+                    "wset_mb": memory.wset_mb,
+                    "pwset_mb": memory.pwset_mb,
                     "system_total_memory_mb": memory.system_total_memory_mb,
                     "system_free_memory_mb": memory.system_free_memory_mb,
                 }

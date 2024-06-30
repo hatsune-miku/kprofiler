@@ -17,9 +17,12 @@ page_update_interval: 1000
 # 默认：true
 realtime_diagram: true
 
+#
+latest_record_count: 100
+
 # 是否将监控结果写入日志文件，true 为开启，false 为关闭
 # 写出日志将会产生非常大的数据，会影响固态硬盘寿命
-# 默认：false
+# 默认：true
 write_logs: false
 
 # 以下为进阶配置
