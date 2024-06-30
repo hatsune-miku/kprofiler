@@ -272,6 +272,7 @@ class DashServer:
         )
         def exit_button_callback(n_clicks):
             if n_clicks > 0:
+                print("Exiting...")
                 ProcessUtils.exit_immediately()
 
         return flask_app, dash_app

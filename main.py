@@ -4,12 +4,22 @@
 from core.kprofiler import KProfiler
 from core.history import History
 from server.dash_server import DashServer
+from helpers.config import Config
 import webbrowser
 
 
+def load_config() -> Config:
+    try:
+        return Config("config.yaml")
+    except:
+        print("配置文件加载失败，请确保 config.yaml 存在于 main.py 旁边")
+        exit(1)
+
+
 def main():
-    history = History(history_upperbound=5000)
-    profiler = KProfiler(history)
+    config = load_config()
+    history = History(history_upperbound=config.history_upperbound)
+    profiler = KProfiler(history=history, config=config)
     profiler.start()
 
     if profiler.config.realtime_diagram:

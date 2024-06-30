@@ -5,13 +5,13 @@
 # 监控目标进程名，大小写要注意区分
 target: KOOK.exe
 
-# 每隔多少毫秒采样一次，不可低于 2000 否则可能会导致采样失败
-# 默认：3000
-duration_millis: 3000
+# 每隔多少毫秒采样一次，不可低于 1000 否则可能会导致采样失败
+# 默认：1000
+duration_millis: 1000
 
-# 页面多少毫秒更新一次，不可低于 2000 否则页面可能刷新不出来
-# 默认：3000
-page_update_interval: 3000
+# 页面多少毫秒更新一次，不可低于 1000 否则页面可能刷新不出来
+# 默认：1000
+page_update_interval: 1000
 
 # 是否在监控过程中实时绘制图表，true 为开启，false 为关闭
 # 默认：true
@@ -29,6 +29,8 @@ advanced:
   port: 6308
 
   history_upperbound: 5000
+
+  gpu_duration_millis: 1000
 
   label_criteria:
     - keyword: --type=renderer

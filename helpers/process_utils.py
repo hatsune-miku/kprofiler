@@ -17,17 +17,9 @@ class ProcessUtils:
         return percent
 
     @staticmethod
-    def get_processes_cpu_percent(
-        processes: List[psutil.Process], sample_seconds: int = 1
-    ) -> List[float]:
+    def get_processes_cpu_percent(processes: List[psutil.Process]) -> List[float]:
         count = len(processes)
-        cpu_count_physical = psutil.cpu_count(logical=False)
         cpu_percents = [0] * count
-        for i, p in enumerate(processes):
-            cpu_percents[i] = max(
-                cpu_percents[i], ProcessUtils.get_process_cpu_percent(p)
-            )
-        time.sleep(sample_seconds)
         for i, p in enumerate(processes):
             cpu_percents[i] = max(
                 cpu_percents[i], ProcessUtils.get_process_cpu_percent(p)

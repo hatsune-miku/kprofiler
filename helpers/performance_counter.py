@@ -75,6 +75,7 @@ class PerformanceCounter:
 
     def __init__(self) -> None:
         self.pdh = self._prepare_pdh()
+        self.pid_instance_cache = {}
 
     def _pid_from_instance(self, instance: str) -> int:
         pid = self.PID_PATTERN.search(instance)
@@ -83,6 +84,10 @@ class PerformanceCounter:
         return int(pid.group())
 
     def _get_gpu_instances(self, pids: List[int]) -> List[str]:
+        # Return early if all instances are already cached
+        if all(pid in self.pid_instance_cache for pid in pids):
+            return [self.pid_instance_cache[pid] for pid in pids]
+
         counter_list_buffer_size = ctypes.c_ulong(0)
         instance_list_buffer_size = ctypes.c_ulong(0)
 
@@ -120,8 +125,15 @@ class PerformanceCounter:
                 0,
             )
         )
+
         instances = instance_list_buffer.raw.decode("ascii").strip("\x00").split("\x00")
-        return [i for i in instances if self._pid_from_instance(i) in pids]
+        filtered_instances = []
+        for instance in instances:
+            pid = self._pid_from_instance(instance)
+            self.pid_instance_cache[pid] = instance
+            if pid in pids:
+                filtered_instances.append(instance)
+        return filtered_instances
 
     def get_pid_to_gpu_percent_map(self, pids: List[int]) -> Dict[int, float]:
         query_handle = ctypes.c_void_p()
@@ -147,12 +159,11 @@ class PerformanceCounter:
             counter_handles.append((instance, counter_handle))
 
         self._assert_status(self.pdh.PdhCollectQueryData(query_handle))
-        time.sleep(1)
+        time.sleep(0.1)
         self._assert_status(self.pdh.PdhCollectQueryData(query_handle))
 
         pid_to_gpu_percent_map = {}
 
-        start = time.time()
         for instance, counter_handle in counter_handles:
             counter_value = PDH_FMT_COUNTERVALUE()
             counter_type = ctypes.c_ulong()

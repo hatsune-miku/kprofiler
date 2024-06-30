@@ -22,7 +22,5 @@ class CPUHelper:
             system_free_memory_mb=vm.free / 1024 / 1024,
         )
 
-    def query_process(self, pid: int) -> MemoryUtilization:
-        # Build process gpu usage map
-        process = psutil.Process(pid)
+    def query_process(self, process: psutil.Process) -> MemoryUtilization:
         return self._typed_tuple_from_process(process)

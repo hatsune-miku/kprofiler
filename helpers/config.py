@@ -49,6 +49,10 @@ class Config:
         return self["advanced"]["history_upperbound"]
 
     @property
+    def gpu_duration_millis(self) -> int:
+        return self["advanced"]["gpu_duration_millis"]
+
+    @property
     def label_criteria(self) -> List[LabelCriterion]:
         criteria = self["advanced"]["label_criteria"]
         ret = []

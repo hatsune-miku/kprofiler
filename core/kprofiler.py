@@ -17,17 +17,9 @@ class ProcessDiff(NamedTuple):
 
 
 class KProfiler:
-    @staticmethod
-    def load_config() -> Config:
-        try:
-            return Config("config.yaml")
-        except:
-            print("配置文件加载失败，请确保 config.yaml 存在于 main.py 旁边")
-            exit(1)
-
-    def __init__(self, history: History) -> None:
+    def __init__(self, history: History, config: Config) -> None:
         self.history = history
-        self.config = self.load_config()
+        self.config = config
         self.worker: KProfilerWorker = None
         self.process_map = ProcessMap([], self.config)
         self.subscribers = []

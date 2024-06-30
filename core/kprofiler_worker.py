@@ -5,7 +5,7 @@ from helpers.memory_helper import CPUHelper, MemoryUtilization
 from helpers.performance_counter import PerformanceCounter
 from helpers.process_utils import ProcessUtils
 from threading import Thread
-from typing import List, Any
+from typing import List, Any, Dict
 import psutil
 import time
 
@@ -18,24 +18,29 @@ class KProfilerWorker:
         history: History,
         emit_reload: Any,
     ):
-        self.thread = None
         self.config = config
         self.process_map = process_map
         self.history = history
         self.cpu_helper = CPUHelper()
         self.performance_counter = PerformanceCounter()
         self.should_stop = False
-        self.thread = None
+        self.gpu_thread = None
+        self.worker_thread = None
         self.emit_reload = emit_reload
+        self.pid_to_gpu_percent_cache = {}
         print(process_map)
 
     def start(self) -> None:
         worker = self._make_worker()
-        self.thread = Thread(target=worker)
-        self.thread.start()
+        self.worker_thread = Thread(target=worker)
+        self.worker_thread.start()
+
+        gpu_worker = self._make_gpu_worker()
+        self.gpu_thread = Thread(target=gpu_worker)
+        self.gpu_thread.start()
 
     def wait_all(self) -> None:
-        self.thread.join()
+        self.worker_thread.join()
 
     def notify_stop(self) -> None:
         self.should_stop = True
@@ -43,20 +48,45 @@ class KProfilerWorker:
     def set_process_map(self, process_map: ProcessMap) -> None:
         self.process_map = process_map
 
-    def _make_worker(self) -> None:
-        def _worker():
+    def _make_worker_routine(self, duration_millis: int, proc):
+        def _routine():
             while not self.should_stop:
-                try:
-                    self._capture_profile(self.process_map.processes)
-                except:
-                    pass
+                start_time = time.time()
+                proc()
+                seconds_elapsed = time.time() - start_time
+                time.sleep(max(0, duration_millis / 1000.0 - seconds_elapsed))
 
-                self.emit_reload()
+        return _routine
 
-                # -2 即少等 2s，这是因为 psutil 和 performance_counter 至少要消耗 2s 才能获取到数据
-                time.sleep(max(0, self.config.duration_millis / 1000.0 - 2))
+    def _make_gpu_worker(self):
+        def _proc():
+            pid_to_gpu = self.performance_counter.get_pid_to_gpu_percent_map(
+                [p.pid for p in self.process_map.processes]
+            )
+            for pid, gpu_percent in pid_to_gpu.items():
+                self.pid_to_gpu_percent_cache[pid] = gpu_percent
 
-        return _worker
+        return self._make_worker_routine(self.config.gpu_duration_millis, _proc)
+
+    def _make_worker(self):
+        def _proc():
+            try:
+                self._capture_profile(self.process_map.processes)
+            except:
+                pass
+
+            Thread(target=self.emit_reload).start()
+
+        return self._make_worker_routine(self.config.duration_millis, _proc)
+
+    def get_pid_to_gpu_percent_map(self, pids: List[int]) -> Dict[int, float]:
+        ret = {}
+        for pid in pids:
+            if pid in self.pid_to_gpu_percent_cache:
+                ret[pid] = self.pid_to_gpu_percent_cache[pid]
+            else:
+                ret[pid] = 0
+        return ret
 
     def _capture_profile(self, processes: List[psutil.Process]):
         pids = [process.pid for process in processes]
@@ -71,7 +101,7 @@ class KProfilerWorker:
         system_free_memory_mb_total = 0
 
         for i, process in enumerate(processes):
-            memory_utilization = self.cpu_helper.query_process(process.pid)
+            memory_utilization = self.cpu_helper.query_process(process)
             cpu_percent = cpu_percents[i]
             gpu_percent = pid_to_gpu_percent.get(process.pid, 0)
             process_kind = ProcessKind(
