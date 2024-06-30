@@ -48,6 +48,4 @@ CPU 占用率的计算方式实在太多了，不同的工具读数都不同，�
 
 ## Demo
 
-以同样基于 electron 的微信小程序 PC 版为例：
-
 ![Demo 1](doc/demo2.jpg)
