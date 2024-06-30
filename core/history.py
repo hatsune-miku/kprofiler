@@ -41,6 +41,17 @@ class History:
         if len(self.records) > self.history_upperbound:
             self.records = self.records[-self.history_upperbound :]
 
+    def get_all(
+        self, time_window=None, pid: Optional[int] = None
+    ) -> List[HistoryRecord]:
+        return [
+            r
+            for r in self.records
+            if r.timestamp_seconds >= time_window.start
+            and r.timestamp_seconds <= time_window.end
+            and (pid is None or r.process.pid == pid)
+        ]
+
     def get_latest(self, count: int, pid: Optional[int] = None) -> List[HistoryRecord]:
         records = (
             self.records

@@ -54,7 +54,7 @@ class KProfilerWorker:
                 start_time = time.time()
                 proc()
                 seconds_elapsed = time.time() - start_time
-                time.sleep(max(0, duration_millis / 1000.0 - seconds_elapsed))
+                time.sleep(max(0.1, duration_millis / 1000.0 - seconds_elapsed))
 
         return _routine
 

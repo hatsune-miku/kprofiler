@@ -159,7 +159,7 @@ class PerformanceCounter:
             counter_handles.append((instance, counter_handle))
 
         self._assert_status(self.pdh.PdhCollectQueryData(query_handle))
-        time.sleep(0.1)
+        time.sleep(1)
         self._assert_status(self.pdh.PdhCollectQueryData(query_handle))
 
         pid_to_gpu_percent_map = {}
