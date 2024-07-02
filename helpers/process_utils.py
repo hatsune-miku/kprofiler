@@ -12,9 +12,7 @@ class ProcessUtils:
     @staticmethod
     def get_process_cpu_percent(process: psutil.Process) -> float:
         percent = process.cpu_percent()
-        if percent > 100:
-            percent /= psutil.cpu_count(logical=False)
-        return percent
+        return percent / psutil.cpu_count(logical=False)
 
     @staticmethod
     def get_processes_cpu_percent(processes: List[psutil.Process]) -> List[float]:
