@@ -90,7 +90,7 @@ class KProfilerWorker:
 
     def _capture_profile(self, processes: List[psutil.Process]):
         pids = [process.pid for process in processes]
-        pid_to_gpu_percent = self.performance_counter.get_pid_to_gpu_percent_map(pids)
+        pid_to_gpu_percent = self.get_pid_to_gpu_percent_map(pids)
         cpu_percents = ProcessUtils.get_processes_cpu_percent(processes)
         count = len(processes)
 
