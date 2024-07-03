@@ -105,7 +105,18 @@ class DashServer:
         self.processes: List[Process] = []
         self.process_labels = set()
         self.time_window: Optional[TimeWindow] = None
+        self.should_refresh = True
+        self.next_tick = None
+        self.status_text = "未在计时"
         self._update_internal_processes()
+
+    def on_next_tick(self, proc):
+        self.next_tick = proc
+
+    def call_next_tick(self):
+        if self.next_tick is not None:
+            self.next_tick()
+            self.next_tick = None
 
     def notify_processes_updated(self):
         if self.server is not None:
@@ -149,6 +160,9 @@ class DashServer:
 
     def _make_callback_for(self, pid: int, is_percent_data: bool):
         def callback(n: int) -> go.Figure:
+            if not self.should_refresh:
+                return dash.no_update
+
             if self.time_window is None:
                 latest_records = self.history.get_latest(
                     self.config.latest_record_count, pid
@@ -327,6 +341,8 @@ class DashServer:
                     xaxis_title="时间",
                     yaxis_title="已用 (MB)",
                 )
+
+            self.call_next_tick()
             return fig
 
         return callback
@@ -352,12 +368,16 @@ class DashServer:
                         [
                             html.Button("结束程序", id="button-exit", n_clicks=0),
                             html.Button("刷新页面", id="button-refresh", n_clicks=0),
-                            html.Div(id="exit", style={"display": "none"}),
-                        ]
-                    ),
-                    html.Hr(),
-                    html.Div(
-                        [
+                            html.Button("清屏", id="button-clear", n_clicks=0),
+                            html.Div(className="vertical-rule"),
+                            html.Button("保存数据", id="button-save", n_clicks=0),
+                            html.Button("读取数据", id="button-load", n_clicks=0),
+                            html.Div(className="vertical-rule"),
+                            html.Button(
+                                children="暂停更新", id="button-pause", n_clicks=0
+                            ),
+                            html.Button("恢复更新", id="button-restore", n_clicks=0),
+                            html.Div(className="vertical-rule"),
                             dcc.Input(
                                 id="input-time",
                                 type="number",
@@ -372,8 +392,13 @@ class DashServer:
                             html.Button(
                                 "清除计时", id="button-remove-timer", n_clicks=0
                             ),
-                            html.Span("当前状态："),
+                            html.Span("当前状态: "),
                             html.Span(id="timer-status", children="未在计时"),
+                            html.Div(id="exit", style={"display": "none"}),
+                            html.Div(id="save-filename", style={"display": "none"}),
+                            html.Div(id="save-text", style={"display": "none"}),
+                            html.Div(id="load-text", style={"display": "none"}),
+                            html.Div(id="message", style={"display": "none"}),
                         ]
                     ),
                 ]
@@ -403,7 +428,8 @@ class DashServer:
                 html.Div(
                     [
                         html.H2("暂无数据"),
-                        html.H3("请打开目标进程，然后这里会自动刷新"),
+                        html.H3("请打开目标进程，然后这里会自动刷新。"),
+                        html.H3("提示：进程名大小写一定要匹配~"),
                     ]
                 )
             )
@@ -427,9 +453,61 @@ class DashServer:
             ClientsideFunction("main", function_name="refresh_page"),
             [Input("button-refresh", "n_clicks")],
         )
+        dash_app.clientside_callback(
+            ClientsideFunction("main", function_name="handle_save"),
+            [Input("save-text", "children"), Input("save-filename", "children")],
+        )
+        dash_app.clientside_callback(
+            ClientsideFunction("main", function_name="handle_load"),
+            Output("load-text", "children"),
+            [Input("button-load", "n_clicks")],
+        )
+        dash_app.clientside_callback(
+            ClientsideFunction("main", function_name="show_message"),
+            [Input("message", "children")],
+        )
+
+        def clear_history():
+            self.history.records = []
+
+        @dash_app.callback(Input("button-load", "n_clicks"))
+        def handle_load(n_clicks):
+            if n_clicks > 0:
+                pass
 
         @dash_app.callback(
-            Output("timer-status", "children", allow_duplicate=True),
+            Output("save-text", "children"),
+            Output("save-filename", "children"),
+            Output('message', 'children', allow_duplicate=True),
+            [Input("button-save", "n_clicks")],
+        )
+        def handle_save(n_clicks):
+            if n_clicks <= 0:
+                return [None, None, dash.no_update]
+            text = self.history.serialize()
+            filename = f"history-{self.config.target}.csv"
+            return [text, filename, f"已下载为{filename}"]
+
+        @dash_app.callback([Input("load-text", "children")])
+        def handle_load(text):
+            self.history.parse_and_load(text, self.config.history_upperbound)
+
+            def pause_refresh():
+                self.should_refresh = False
+
+            self.on_next_tick(pause_refresh)
+
+        @dash_app.callback([Input("button-pause", "n_clicks")])
+        def handle_pause(n_clicks):
+            if n_clicks > 0:
+                self.should_refresh = False
+
+        @dash_app.callback([Input("button-restore", "n_clicks")])
+        def handle_restore(n_clicks):
+            if n_clicks > 0:
+                self.should_refresh = True
+
+        @dash_app.callback(
             [
                 Input("button-start-timer", "n_clicks"),
                 Input("input-time", "value"),
@@ -437,18 +515,15 @@ class DashServer:
         )
         def start_timer(n_clicks, value):
             if n_clicks <= 0:
-                return
+                self.status_text = "未在计时"
             if value is None or value <= 0 or value > 7200:
-                return
+                self.status_text = "错误：时间不能超过 7200 分钟"
             now = int(time.time())
             end = now + value * 60
             self.time_window = TimeWindow(start=now, end=end)
-            return [
-                f"正在计时，将在 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end))} 结束"
-            ]
+            self.status_text = f"正在计时，将在 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end))} 结束"
 
         @dash_app.callback(
-            Output("timer-status", "children", allow_duplicate=True),
             [
                 Input("button-remove-timer", "n_clicks"),
             ],
@@ -456,11 +531,30 @@ class DashServer:
         def remove_timer(n_clicks):
             if n_clicks <= 0:
                 return
+            self.status_text = "未在计时"
             self.time_window = None
-            return ["未在计时"]
 
         @dash_app.callback(
-            [Output("button-refresh", "n_clicks")],
+            Output("interval-refresh-layout", "n_intervals"),
+            Output("message", "children", allow_duplicate=True),
+            [Input("button-clear", "n_clicks")],
+        )
+        def handle_clear(n_clicks):
+            if n_clicks > 0:
+                clear_history()
+                return [1234567, "将在下个刷新周期清屏！"]
+            return dash.no_update
+
+        @dash_app.callback(
+            Output("timer-status", "children"),
+            [Input("interval-refresh-layout", "n_intervals")],
+        )
+        def handle_update_status(n_intervals):
+            prefix = "" if self.should_refresh else "更新已暂停，"
+            return prefix + self.status_text
+
+        @dash_app.callback(
+            Output("button-refresh", "n_clicks"),
             [Input("interval-refresh-layout", "n_intervals")],
         )
         def poll_refresh(n_intervals):

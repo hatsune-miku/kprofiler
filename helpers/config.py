@@ -45,6 +45,10 @@ class Config:
         return self["write_logs"]
 
     @property
+    def disable_gpu(self) -> bool:
+        return self["disable_gpu"]
+
+    @property
     def port(self) -> int:
         return self["advanced"]["port"]
 

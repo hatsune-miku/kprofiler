@@ -3,7 +3,7 @@
 # =================
 
 # 监控目标进程名，大小写要注意区分
-target: electron.exe
+target: KOOK.exe
 
 # 每隔多少毫秒采样一次，不可低于 1000 否则可能会导致采样失败
 # 默认：1000
@@ -20,6 +20,10 @@ realtime_diagram: true
 # 未在计时的时候，最多保留多少条记录
 # 默认：100
 latest_record_count: 100
+
+# 是否停用 GPU 监控、换来更快的更新速度，true 为开启，false 为关闭
+# 默认：true
+disable_gpu: true
 
 # 是否将监控结果写入日志文件，true 为开启，false 为关闭
 # 写出日志将会产生非常大的数据，会影响固态硬盘寿命

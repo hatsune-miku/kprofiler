@@ -4,13 +4,13 @@ from .process_utils import ProcessUtils
 
 
 class MemoryUtilization(NamedTuple):
-    system_total_memory_mb: int
-    system_free_memory_mb: int
-    uss_mb: int
-    rss_mb: int
-    vms_mb: int
-    wset_mb: int
-    pwset_mb: int
+    system_total_memory_mb: float
+    system_free_memory_mb: float
+    uss_mb: float
+    rss_mb: float
+    vms_mb: float
+    wset_mb: float
+    pwset_mb: float
 
 
 class CPUHelper:

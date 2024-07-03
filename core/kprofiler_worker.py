@@ -150,7 +150,7 @@ class KProfilerWorker:
             return
 
         if self.config.write_logs:
-            self.history.save_to_csv(
+            self.history.append_to_csv(
                 f"history-{self.config.target}.csv", last_count=count
             )
 
