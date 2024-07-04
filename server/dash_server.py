@@ -58,16 +58,16 @@ class FlaskServer:
         self.server_thread = None
 
     def start(self) -> None:
-        print("Process list changed. Server reloading...")
+        print("检测到进程列表变动，重启 Dash 服务中...")
         self.server: BaseWSGIServer = make_server(
             "0.0.0.0", self.config.port, self.flask
         )
         self.server_thread = Thread(target=self.server.serve_forever, daemon=True)
         self.server_thread.start()
-        print(f"Server started at")
+        print(f"Dash 服务就绪：")
         print(f"* http://localhost:{self.config.port}")
         print(f"* http://0.0.0.0:{self.config.port}")
-        print("Press Ctrl+C to shutdown.")
+        print("按 Ctrl+C 或者在网页端点击【结束程序】即可关闭服务.")
 
     def stop(self) -> None:
         self.server.shutdown()
@@ -336,7 +336,7 @@ class DashServer:
             server=flask_app,
             assets_folder="assets",
             title="KProfiler",
-            update_title="KProfiler",
+            update_title="KProfiler - 刷新中",  # updating_title如果末尾有空格就会导致起不来服务
             suppress_callback_exceptions=False,
             prevent_initial_callbacks="initial_duplicate",
         )
