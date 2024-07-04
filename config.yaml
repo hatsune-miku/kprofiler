@@ -11,7 +11,7 @@ duration_millis: 500
 
 # 页面多少毫秒更新一次，不可低于 100 否则页面可能刷新不出来
 # 默认：1000
-page_update_interval: 500
+page_update_interval: 1000
 
 # 是否在监控过程中实时绘制图表，true 为开启，false 为关闭
 # 默认：true

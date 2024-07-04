@@ -62,7 +62,7 @@ class FlaskServer:
     def start(self) -> None:
         print("Process list changed. Server reloading...")
         self.server = make_server("0.0.0.0", self.config.port, self.flask)
-        self.server_thread = Thread(target=self.server.serve_forever)
+        self.server_thread = Thread(target=self.server.serve_forever, daemon=True)
         self.server_thread.start()
 
         def _start_dash_app():
@@ -71,7 +71,7 @@ class FlaskServer:
                 use_reloader=False,
             )
 
-        self.dash_thread = Thread(target=_start_dash_app)
+        self.dash_thread = Thread(target=_start_dash_app, daemon=True)
         self.dash_thread.start()
 
     def stop(self) -> None:
@@ -478,7 +478,7 @@ class DashServer:
         @dash_app.callback(
             Output("save-text", "children"),
             Output("save-filename", "children"),
-            Output('message', 'children', allow_duplicate=True),
+            Output("message", "children", allow_duplicate=True),
             [Input("button-save", "n_clicks")],
         )
         def handle_save(n_clicks):

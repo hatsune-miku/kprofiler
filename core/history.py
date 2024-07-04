@@ -111,10 +111,15 @@ class History:
     @staticmethod
     def parse(s: Optional[str], history_upperbound: int) -> "History":
         ret = History(history_upperbound)
-        if s == "":
+        if not s or s == "":
             return ret
-        lines = s.split("\n")
-        records = [HistoryRecord.parse(line) for line in lines[1:]]
+        lines = s.split("\n")[1:]
+        records = []
+        for line in lines:
+            try:
+                records.append(HistoryRecord.parse(line))
+            except:
+                pass
         ret.records = records
         return ret
 

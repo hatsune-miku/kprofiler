@@ -32,11 +32,11 @@ class KProfilerWorker:
 
     def start(self) -> None:
         worker = self._make_worker()
-        self.worker_thread = Thread(target=worker)
+        self.worker_thread = Thread(target=worker, daemon=True)
         self.worker_thread.start()
 
         gpu_worker = self._make_gpu_worker()
-        self.gpu_thread = Thread(target=gpu_worker)
+        self.gpu_thread = Thread(target=gpu_worker, daemon=True)
         self.gpu_thread.start()
 
     def wait_all(self) -> None:
@@ -75,7 +75,8 @@ class KProfilerWorker:
             except:
                 pass
 
-            Thread(target=self.emit_reload).start()
+            reload_thread = Thread(target=self.emit_reload, daemon=True)
+            reload_thread.start()
 
         return self._make_worker_routine(self.config.duration_millis, _proc)
 
@@ -152,9 +153,4 @@ class KProfilerWorker:
         if self.config.write_logs:
             self.history.append_to_csv(
                 f"history-{self.config.target}.csv", last_count=count
-            )
-
-            now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-            print(
-                f"{now} - {count} record(s) saved to history-{self.config.target}.csv"
             )

@@ -6,6 +6,7 @@ from core.history import History
 from server.dash_server import DashServer
 from helpers.config import Config
 import webbrowser
+import time
 
 
 def load_config() -> Config:
@@ -27,6 +28,10 @@ def main():
         profiler.subscribe_to_process_change(server.notify_processes_updated)
         profiler.trigger_subscribers()
         webbrowser.open(f"http://127.0.0.1:{profiler.config.port}", autoraise=True)
+
+    while True:
+        # Main loop
+        time.sleep(1)
 
 
 if __name__ == "__main__":
