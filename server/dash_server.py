@@ -27,7 +27,7 @@ from helpers.process_utils import ProcessUtils
 from psutil import Process
 from threading import Thread
 from flask import request, Flask
-from werkzeug.serving import make_server
+from werkzeug.serving import BaseWSGIServer, make_server
 
 
 class Trace(NamedTuple):
@@ -57,23 +57,17 @@ class FlaskServer:
         self.config = config
         self.server_thread = None
 
-        # https://docs.python.org/3/library/sys.html
-        self.traceback_limit_backup = 1000
-
     def start(self) -> None:
         print("Process list changed. Server reloading...")
-        self.server = make_server("0.0.0.0", self.config.port, self.flask)
+        self.server: BaseWSGIServer = make_server(
+            "0.0.0.0", self.config.port, self.flask
+        )
         self.server_thread = Thread(target=self.server.serve_forever, daemon=True)
         self.server_thread.start()
-
-        def _start_dash_app():
-            self.app.run(
-                debug=False,
-                use_reloader=False,
-            )
-
-        self.dash_thread = Thread(target=_start_dash_app, daemon=True)
-        self.dash_thread.start()
+        print(f"Server started at")
+        print(f"* http://localhost:{self.config.port}")
+        print(f"* http://0.0.0.0:{self.config.port}")
+        print("Press Ctrl+C to shutdown.")
 
     def stop(self) -> None:
         self.server.shutdown()
@@ -122,7 +116,6 @@ class DashServer:
         self._register_callbacks()
         self.server = FlaskServer(self.flask, self.dash, self.config)
         self.server.start()
-        self.request_refresh()
 
     def request_refresh(self):
         self.refresh_flag = True
@@ -133,9 +126,9 @@ class DashServer:
         if is_empty:
             self.processes = []
         else:
-            self.processes = [
-                DummyProcess(self.config.target)
-            ] + self.process_map.processes
+            self.processes = [DummyProcess(self.config.target)] + (
+                [] if self.config.total_only else self.process_map.processes
+            )
 
     def _register_callbacks(self):
         for process in self.processes:

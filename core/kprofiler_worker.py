@@ -36,9 +36,10 @@ class KProfilerWorker:
         self.worker_thread = Thread(target=worker, daemon=True)
         self.worker_thread.start()
 
-        gpu_worker = self._make_gpu_worker()
-        self.gpu_thread = Thread(target=gpu_worker, daemon=True)
-        self.gpu_thread.start()
+        if not self.config.disable_gpu:
+            gpu_worker = self._make_gpu_worker()
+            self.gpu_thread = Thread(target=gpu_worker, daemon=True)
+            self.gpu_thread.start()
 
     def wait_all(self) -> None:
         self.worker_thread.join()

@@ -29,6 +29,8 @@ def main():
         )
         profiler.subscribe_to_process_change(server.notify_processes_updated)
         profiler.trigger_subscribers()
+
+        time.sleep(1)
         webbrowser.open(f"http://127.0.0.1:{profiler.config.port}", autoraise=True)
 
     while True:

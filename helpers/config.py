@@ -49,6 +49,10 @@ class Config:
         return self["disable_gpu"]
 
     @property
+    def total_only(self) -> bool:
+        return self["total_only"]
+
+    @property
     def port(self) -> int:
         return self["advanced"]["port"]
 
