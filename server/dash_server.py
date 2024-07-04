@@ -21,6 +21,7 @@ from dash.dependencies import Input, Output
 from typing import List, Tuple, NamedTuple, Dict, Optional
 from core.history import History
 from core.process_map import ProcessMap
+from core.kprofiler_worker import KProfilerWorker
 from helpers.config import Config
 from helpers.process_utils import ProcessUtils
 from psutil import Process
@@ -94,29 +95,21 @@ class DashServer:
         self,
         history: History,
         process_map: ProcessMap,
+        worker: KProfilerWorker,
         config: Config,
     ):
         self.history = history
         self.config = config
         self.process_map = process_map
+        self.worker = worker
         self.dash: dash.Dash = None
         self.server: FlaskServer = None
         self.refresh_flag = False
         self.processes: List[Process] = []
         self.process_labels = set()
         self.time_window: Optional[TimeWindow] = None
-        self.should_refresh = True
-        self.next_tick = None
         self.status_text = "未在计时"
         self._update_internal_processes()
-
-    def on_next_tick(self, proc):
-        self.next_tick = proc
-
-    def call_next_tick(self):
-        if self.next_tick is not None:
-            self.next_tick()
-            self.next_tick = None
 
     def notify_processes_updated(self):
         if self.server is not None:
@@ -160,13 +153,10 @@ class DashServer:
 
     def _make_callback_for(self, pid: int, is_percent_data: bool):
         def callback(n: int) -> go.Figure:
-            if not self.should_refresh:
-                return dash.no_update
+            count = self.config.latest_record_count
 
             if self.time_window is None:
-                latest_records = self.history.get_latest(
-                    self.config.latest_record_count, pid
-                )
+                latest_records = self.history.get_latest(count, pid)
             else:
                 latest_records = self.history.get_all(self.time_window, pid)
             if not latest_records:
@@ -342,7 +332,6 @@ class DashServer:
                     yaxis_title="已用 (MB)",
                 )
 
-            self.call_next_tick()
             return fig
 
         return callback
@@ -354,7 +343,7 @@ class DashServer:
             server=flask_app,
             assets_folder="assets",
             title="KProfiler",
-            update_title="KProfiler - 正刷新数据...",
+            update_title="KProfiler",
             suppress_callback_exceptions=True,
             prevent_initial_callbacks="initial_duplicate",
         )
@@ -490,22 +479,20 @@ class DashServer:
 
         @dash_app.callback([Input("load-text", "children")])
         def handle_load(text):
+            if text is None:
+                return
+            self.worker.pause()
             self.history.parse_and_load(text, self.config.history_upperbound)
-
-            def pause_refresh():
-                self.should_refresh = False
-
-            self.on_next_tick(pause_refresh)
 
         @dash_app.callback([Input("button-pause", "n_clicks")])
         def handle_pause(n_clicks):
             if n_clicks > 0:
-                self.should_refresh = False
+                self.worker.pause()
 
         @dash_app.callback([Input("button-restore", "n_clicks")])
         def handle_restore(n_clicks):
             if n_clicks > 0:
-                self.should_refresh = True
+                self.worker.resume()
 
         @dash_app.callback(
             [
@@ -543,14 +530,14 @@ class DashServer:
             if n_clicks > 0:
                 clear_history()
                 return [1234567, "将在下个刷新周期清屏！"]
-            return dash.no_update
+            return [dash.no_update, dash.no_update]
 
         @dash_app.callback(
             Output("timer-status", "children"),
             [Input("interval-refresh-layout", "n_intervals")],
         )
         def handle_update_status(n_intervals):
-            prefix = "" if self.should_refresh else "更新已暂停，"
+            prefix = "更新已暂停，" if self.worker.paused else ""
             return prefix + self.status_text
 
         @dash_app.callback(

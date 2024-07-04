@@ -20,10 +20,12 @@ class KProfiler:
     def __init__(self, history: History, config: Config) -> None:
         self.history = history
         self.config = config
-        self.worker: KProfilerWorker = None
         self.process_map = ProcessMap([], self.config)
         self.subscribers = []
         self.reload_processes(skip_optimization=True)
+        self.worker = KProfilerWorker(
+            self.process_map, self.config, self.history, self.reload_processes
+        )
 
     def subscribe_to_process_change(self, callback) -> None:
         self.subscribers.append(callback)
@@ -46,9 +48,6 @@ class KProfiler:
         self.trigger_subscribers()
 
     def start(self) -> None:
-        self.worker = KProfilerWorker(
-            self.process_map, self.config, self.history, self.reload_processes
-        )
         self.worker.start()
 
     def notify_stop(self) -> None:

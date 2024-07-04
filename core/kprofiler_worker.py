@@ -28,6 +28,7 @@ class KProfilerWorker:
         self.worker_thread = None
         self.emit_reload = emit_reload
         self.pid_to_gpu_percent_cache = {}
+        self.paused = False
         print(process_map)
 
     def start(self) -> None:
@@ -71,7 +72,8 @@ class KProfilerWorker:
     def _make_worker(self):
         def _proc():
             try:
-                self._capture_profile(self.process_map.processes)
+                if not self.paused:
+                    self._capture_profile(self.process_map.processes)
             except:
                 pass
 
@@ -88,6 +90,12 @@ class KProfilerWorker:
             else:
                 ret[pid] = 0
         return ret
+
+    def pause(self):
+        self.paused = True
+
+    def resume(self):
+        self.paused = False
 
     def _capture_profile(self, processes: List[psutil.Process]):
         pids = [process.pid for process in processes]

@@ -45,7 +45,7 @@
         console.log("Exiting program")
         if (count > 0) {
           if (confirm("确定要结束监控然后退出程序吗？")) {
-            setTimeout(window.close, 500)
+            setTimeout(window.close, 200)
             return 1
           }
         }
