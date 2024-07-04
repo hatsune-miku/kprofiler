@@ -387,33 +387,23 @@ class DashServer:
             )
         )
 
-        graphs.append(
-            html.Div(
-                [
-                    html.H2(f"总值数据"),
-                    dcc.Graph(id=f"live-update-graph-{0}-percents"),
-                    dcc.Graph(id=f"live-update-graph-{0}-data"),
-                ]
-            ),
-        )
-
-        # for process in self.processes:
-        #     name = process.name()
-        #     pid = process.pid
-        #     label = self.process_map.get_label(pid)
-        #     graphs.append(
-        #         html.Div(
-        #             [
-        #                 html.H2(
-        #                     f"{name} {label} (PID={pid}) 数据"
-        #                     if pid != 0
-        #                     else f"{name} 总值"
-        #                 ),
-        #                 dcc.Graph(id=f"live-update-graph-{pid}-percents"),
-        #                 dcc.Graph(id=f"live-update-graph-{pid}-data"),
-        #             ]
-        #         ),
-        #     )
+        for process in self.processes:
+            name = process.name()
+            pid = process.pid
+            label = self.process_map.get_label(pid)
+            graphs.append(
+                html.Div(
+                    [
+                        html.H2(
+                            f"{name} {label} (PID={pid}) 数据"
+                            if pid != 0
+                            else f"{name} 总值"
+                        ),
+                        dcc.Graph(id=f"live-update-graph-{pid}-percents"),
+                        dcc.Graph(id=f"live-update-graph-{pid}-data"),
+                    ]
+                ),
+            )
 
         if len(self.processes) == 0:
             graphs.append(
