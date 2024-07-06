@@ -29,7 +29,6 @@ class KProfilerWorker:
         self.emit_reload = emit_reload
         self.pid_to_gpu_percent_cache = {}
         self.paused = False
-        print(process_map)
 
     def start(self) -> None:
         worker = self._make_worker()

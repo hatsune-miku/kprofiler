@@ -1,7 +1,6 @@
 from psutil import Process
 from typing import List
 from helpers.config import Config
-from prettytable import PrettyTable
 
 
 class ProcessMap:
@@ -44,9 +43,3 @@ class ProcessMap:
 
     def count_label(self, label: str) -> int:
         return sum([1 for l in self.pid_to_label.values() if l == label])
-
-    def __str__(self) -> str:
-        table = PrettyTable(["类型", "数量"])
-        for label in self.labels:
-            table.add_row([label, self.count_label(label)])
-        return f"共找到 {len(self.processes)} 个 {self.config.target} 进程\n{table}"

@@ -3,10 +3,9 @@
 
 from core.kprofiler import KProfiler
 from core.history import History
-from server.dash_server import DashServer
 from helpers.config import Config
+from server.backend import run_backend
 import webbrowser
-import time
 
 
 def load_config() -> Config:
@@ -24,19 +23,24 @@ def main():
     profiler.start()
 
     if profiler.config.realtime_diagram:
-        server = DashServer(
-            history, profiler.process_map, profiler.worker, profiler.config
-        )
-        profiler.subscribe_to_process_change(server.notify_processes_updated)
-        profiler.trigger_subscribers()
-
-        time.sleep(1)
+        # server = DashServer(
+        #     history, profiler.process_map, profiler.worker, profiler.config
+        # )
+        # profiler.subscribe_to_process_change(server.notify_processes_updated)
+        # profiler.trigger_subscribers()
         webbrowser.open(f"http://127.0.0.1:{profiler.config.port}", autoraise=True)
-
-    while True:
-        # Main loop
-        time.sleep(1)
+        run_backend()
 
 
 if __name__ == "__main__":
+    print(
+        """
+██╗  ██╗██████╗ ██████╗  ██████╗ ███████╗██╗██╗     ███████╗██████╗ 
+██║ ██╔╝██╔══██╗██╔══██╗██╔═══██╗██╔════╝██║██║     ██╔════╝██╔══██╗
+█████╔╝ ██████╔╝██████╔╝██║   ██║█████╗  ██║██║     █████╗  ██████╔╝
+██╔═██╗ ██╔═══╝ ██╔══██╗██║   ██║██╔══╝  ██║██║     ██╔══╝  ██╔══██╗
+██║  ██╗██║     ██║  ██║╚██████╔╝██║     ██║███████╗███████╗██║  ██║
+╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝╚══════╝╚═╝  ╚═╝
+"""
+    )
     main()
