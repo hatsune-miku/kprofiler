@@ -35,9 +35,12 @@ def main():
             target=lambda: time.sleep(0.25)
             or webbrowser.open(
                 f"http://127.0.0.1:{profiler.config.port}", autoraise=True
-            )
+            ),
+            daemon=True,
         ).start()
         backend.run()
+
+    profiler.wait_all()
 
 
 if __name__ == "__main__":

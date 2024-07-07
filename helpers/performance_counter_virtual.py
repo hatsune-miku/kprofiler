@@ -1,7 +1,5 @@
-import ctypes
-import time
-import re
 from typing import List, Dict
+import psutil
 
 
 class PerformanceCounter:
@@ -13,6 +11,11 @@ class PerformanceCounter:
 
     def _get_gpu_instances(self, pids: List[int]) -> List[str]:
         return []
+
+    def get_pid_to_cpu_percent_map(
+        self, processes: List[psutil.Process]
+    ) -> Dict[int, float]:
+        return {}
 
     def get_pid_to_gpu_percent_map(self, pids: List[int]) -> Dict[int, float]:
         return {}

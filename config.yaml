@@ -7,7 +7,7 @@ target: KOOK.exe
 
 # 每隔多少毫秒采样一次，不可低于 100 否则可能会导致采样失败
 # 默认：1000
-duration_millis: 500
+duration_millis: 1000
 
 # 页面多少毫秒更新一次，不可低于 100 否则页面可能刷新不出来
 # 默认：1000
@@ -16,10 +16,6 @@ page_update_interval: 1000
 # 是否在监控过程中实时绘制图表，true 为开启，false 为关闭
 # 默认：true
 realtime_diagram: true
-
-# 未在计时的时候，最多保留多少条记录
-# 默认：100
-latest_record_count: 100
 
 # 是否停用 GPU 监控、换来更快的更新速度，true 为开启，false 为关闭
 # 默认：true
@@ -45,6 +41,9 @@ advanced:
 
   # 后台线程多久重新加载一次 GPU 百分比的数据，单位：毫秒
   gpu_duration_millis: 1000
+
+  # 后台线程多久重新加载一次 CPU 百分比的数据，单位：毫秒
+  cpu_duration_millis: 1000
 
   # 启动参数中包含什么样的关键字，将其标记为什么样的进程
   label_criteria:

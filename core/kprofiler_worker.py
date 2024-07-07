@@ -3,9 +3,8 @@ from .history import History, ProcessKind
 from helpers.config import Config
 from helpers.memory_helper import CPUHelper, MemoryUtilization
 from helpers.performance_counter import PerformanceCounter
-from helpers.process_utils import ProcessUtils
 from threading import Thread
-from typing import List, Any, Dict
+from typing import List, Dict
 import psutil
 import time
 
@@ -16,7 +15,6 @@ class KProfilerWorker:
         process_map: ProcessMap,
         config: Config,
         history: History,
-        emit_reload: Any,
     ):
         self.config = config
         self.process_map = process_map
@@ -24,16 +22,21 @@ class KProfilerWorker:
         self.cpu_helper = CPUHelper()
         self.performance_counter = PerformanceCounter()
         self.should_stop = False
+        self.cpu_thread = None
         self.gpu_thread = None
         self.worker_thread = None
-        self.emit_reload = emit_reload
         self.pid_to_gpu_percent_cache = {}
+        self.pid_to_cpu_percent_cache = {}
         self.paused = False
 
     def start(self) -> None:
         worker = self._make_worker()
         self.worker_thread = Thread(target=worker, daemon=True)
         self.worker_thread.start()
+
+        cpu_worker = self._make_cpu_worker()
+        self.cpu_thread = Thread(target=cpu_worker, daemon=True)
+        self.cpu_thread.start()
 
         if not self.config.disable_gpu:
             gpu_worker = self._make_gpu_worker()
@@ -59,6 +62,16 @@ class KProfilerWorker:
 
         return _routine
 
+    def _make_cpu_worker(self):
+        def _proc():
+            pid_to_cpu = self.performance_counter.get_pid_to_cpu_percent_map(
+                self.process_map.processes
+            )
+            for pid, cpu_percent in pid_to_cpu.items():
+                self.pid_to_cpu_percent_cache[pid] = cpu_percent
+
+        return self._make_worker_routine(self.config.cpu_duration_millis, _proc)
+
     def _make_gpu_worker(self):
         def _proc():
             pid_to_gpu = self.performance_counter.get_pid_to_gpu_percent_map(
@@ -77,10 +90,16 @@ class KProfilerWorker:
             except:
                 pass
 
-            reload_thread = Thread(target=self.emit_reload, daemon=True)
-            reload_thread.start()
-
         return self._make_worker_routine(self.config.duration_millis, _proc)
+
+    def get_pid_to_cpu_percent_map(self, pids: List[int]) -> Dict[int, float]:
+        ret = {}
+        for pid in pids:
+            if pid in self.pid_to_cpu_percent_cache:
+                ret[pid] = self.pid_to_cpu_percent_cache[pid]
+            else:
+                ret[pid] = 0
+        return ret
 
     def get_pid_to_gpu_percent_map(self, pids: List[int]) -> Dict[int, float]:
         ret = {}
@@ -100,7 +119,7 @@ class KProfilerWorker:
     def _capture_profile(self, processes: List[psutil.Process]):
         pids = [process.pid for process in processes]
         pid_to_gpu_percent = self.get_pid_to_gpu_percent_map(pids)
-        cpu_percents = ProcessUtils.get_processes_cpu_percent(processes)
+        pid_to_cpu_percent = self.get_pid_to_cpu_percent_map(pids)
         count = len(processes)
 
         cpu_percent_total = 0
@@ -113,10 +132,9 @@ class KProfilerWorker:
         wset_mb_total = 0
         pwset_mb_total = 0
 
-        start = time.time()
-        for i, process in enumerate(processes):
+        for process in processes:
             memory_utilization = self.cpu_helper.query_process(process)
-            cpu_percent = cpu_percents[i]
+            cpu_percent = pid_to_cpu_percent.get(process.pid, 0)
             gpu_percent = pid_to_gpu_percent.get(process.pid, 0)
             process_kind = ProcessKind(
                 pid=process.pid,
@@ -141,9 +159,6 @@ class KProfilerWorker:
                 cpu_percent=cpu_percent,
                 gpu_percent=gpu_percent,
             )
-
-        elapsed_seconds = time.time() - start
-        print(f"Elapsed seconds: {elapsed_seconds}")
 
         self.history.add_record(
             process=ProcessKind(pid=0, name=self.config.target, label="总值"),

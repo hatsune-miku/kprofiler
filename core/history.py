@@ -61,6 +61,7 @@ class History:
     def __init__(self, history_upperbound: int) -> None:
         self.records: List[HistoryRecord] = []
         self.history_upperbound = history_upperbound
+        self.version = 0
 
     def add_record(
         self,
@@ -100,6 +101,9 @@ class History:
         )
         return records[-count:]
 
+    def get_offset(self, offset: int) -> List[HistoryRecord]:
+        return self.records[offset:]
+
     def serialize(self, last_count: Optional[int] = None) -> str:
         records = self.get_latest(last_count) if last_count else self.records
         if len(records) == 0:
@@ -136,6 +140,9 @@ class History:
         """
         with open(path, "r", encoding="utf-8") as f:
             self.parse_and_load(f.read(), history_upperbound)
+
+    def upgrade(self):
+        self.version += 1
 
     def append_to_csv(self, path: str, last_count: Optional[int]) -> None:
         """

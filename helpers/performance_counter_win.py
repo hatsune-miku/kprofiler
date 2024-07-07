@@ -1,7 +1,8 @@
 import ctypes
 import time
 import re
-from typing import List, Dict, NamedTuple
+import psutil
+from typing import List, Dict, Tuple, NamedTuple
 
 
 PDH_MORE_DATA = 0x800007D2
@@ -26,6 +27,11 @@ class PDH_FMT_COUNTERVALUE(ctypes.Structure):
 
 class InstanceCounterHandle(NamedTuple):
     instance: str
+    counter_handle: ctypes.c_void_p
+
+
+class ProcessCounterHandle(NamedTuple):
+    process: psutil.Process
     counter_handle: ctypes.c_void_p
 
 
@@ -84,10 +90,22 @@ class PerformanceCounter:
     def __init__(self) -> None:
         self.pdh: ctypes.WinDLL = self._prepare_pdh()
         self.pid_instance_cache: Dict[int, InstanceCounterHandle] = {}
-        self.query_handle = ctypes.c_void_p()
+        self.process_counter_cache: Dict[psutil.Process, ProcessCounterHandle] = {}
+        self.gpu_query_handle = ctypes.c_void_p()
+        self.cpu_query_handle = ctypes.c_void_p()
         self._assert_status(
-            self.pdh.PdhOpenQueryA(None, None, ctypes.byref(self.query_handle))
+            self.pdh.PdhOpenQueryA(None, None, ctypes.byref(self.cpu_query_handle))
         )
+        self._assert_status(
+            self.pdh.PdhOpenQueryA(None, None, ctypes.byref(self.gpu_query_handle))
+        )
+
+    def __del__(self) -> None:
+        try:
+            self.pdh.PdhCloseQuery(self.cpu_query_handle)
+            self.pdh.PdhCloseQuery(self.gpu_query_handle)
+        except:
+            pass
 
     def _pid_from_instance(self, instance: str) -> int:
         pid = self.PID_PATTERN.search(instance)
@@ -146,6 +164,57 @@ class PerformanceCounter:
                 filtered_instances.append(instance)
         return filtered_instances
 
+    def get_pid_to_cpu_percent_map(
+        self, processes: List[psutil.Process]
+    ) -> Dict[int, float]:
+        process_counter_handle_pairs: List[Tuple[psutil.Process, ctypes.c_void_p]] = []
+        for process in processes:
+            name = process.name().strip(".exe")
+
+            cached_process = self.process_counter_cache.get(process)
+            if cached_process is not None:
+                process_counter_handle_pairs.append(
+                    (cached_process.process, cached_process.counter_handle)
+                )
+            else:
+                counter_path = f"\\Process({name}*)\\% Processor Time".encode("ascii")
+                counter_handle = ctypes.c_void_p()
+                self._assert_status(
+                    self.pdh.PdhAddCounterA(
+                        self.cpu_query_handle,
+                        ctypes.c_char_p(counter_path),
+                        None,
+                        ctypes.byref(counter_handle),
+                    )
+                )
+                process_counter_handle_pairs.append((process, counter_handle))
+                self.process_counter_cache[process] = ProcessCounterHandle(
+                    process=process, counter_handle=counter_handle
+                )
+                self.pdh.PdhCollectQueryData(self.cpu_query_handle)
+
+        self._assert_status(self.pdh.PdhCollectQueryData(self.cpu_query_handle))
+        pid_to_cpu_percent_map = {}
+
+        for process, counter_handle in process_counter_handle_pairs:
+            counter_value = PDH_FMT_COUNTERVALUE()
+            counter_type = ctypes.c_ulong()
+            self._assert_status(
+                self.pdh.PdhGetFormattedCounterValue(
+                    counter_handle,
+                    self.PDH_FMT_DOUBLE,
+                    ctypes.byref(counter_type),
+                    ctypes.byref(counter_value),
+                )
+            )
+            pid = process.pid
+            if pid not in pid_to_cpu_percent_map:
+                pid_to_cpu_percent_map[pid] = counter_value.data.doubleValue
+            else:
+                pid_to_cpu_percent_map[pid] += counter_value.data.doubleValue
+
+        return pid_to_cpu_percent_map
+
     def get_pid_to_gpu_percent_map(self, pids: List[int]) -> Dict[int, float]:
         counter_handles = []
         gpu_instances = self._get_gpu_instances(pids)
@@ -164,7 +233,7 @@ class PerformanceCounter:
                 counter_handle = ctypes.c_void_p()
                 self._assert_status(
                     self.pdh.PdhAddCounterA(
-                        self.query_handle,
+                        self.gpu_query_handle,
                         ctypes.c_char_p(counter_path),
                         None,
                         ctypes.byref(counter_handle),
@@ -174,9 +243,9 @@ class PerformanceCounter:
                 self.pid_instance_cache[pid] = InstanceCounterHandle(
                     instance=instance, counter_handle=counter_handle
                 )
-                self.pdh.PdhCollectQueryData(self.query_handle)
+                self.pdh.PdhCollectQueryData(self.gpu_query_handle)
 
-        self._assert_status(self.pdh.PdhCollectQueryData(self.query_handle))
+        self._assert_status(self.pdh.PdhCollectQueryData(self.gpu_query_handle))
 
         pid_to_gpu_percent_map = {}
 
@@ -191,7 +260,6 @@ class PerformanceCounter:
                     ctypes.byref(counter_value),
                 )
             )
-            instance = str(instance)
             pid = self._pid_from_instance(instance=instance)
             if pid not in pid_to_gpu_percent_map:
                 pid_to_gpu_percent_map[pid] = counter_value.data.doubleValue

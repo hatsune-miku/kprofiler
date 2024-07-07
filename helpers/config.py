@@ -33,10 +33,6 @@ class Config:
         return self["realtime_diagram"]
 
     @property
-    def latest_record_count(self) -> int:
-        return self["latest_record_count"]
-
-    @property
     def page_update_interval(self) -> int:
         return self["page_update_interval"]
 
@@ -59,6 +55,10 @@ class Config:
     @property
     def history_upperbound(self) -> int:
         return self["advanced"]["history_upperbound"]
+
+    @property
+    def cpu_duration_millis(self) -> int:
+        return self["advanced"]["cpu_duration_millis"]
 
     @property
     def gpu_duration_millis(self) -> int:
