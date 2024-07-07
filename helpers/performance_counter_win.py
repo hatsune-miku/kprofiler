@@ -208,10 +208,13 @@ class PerformanceCounter:
                 )
             )
             pid = process.pid
+            percent_value = counter_value.data.doubleValue / psutil.cpu_count(
+                logical=False
+            )
             if pid not in pid_to_cpu_percent_map:
-                pid_to_cpu_percent_map[pid] = counter_value.data.doubleValue
+                pid_to_cpu_percent_map[pid] = percent_value
             else:
-                pid_to_cpu_percent_map[pid] += counter_value.data.doubleValue
+                pid_to_cpu_percent_map[pid] += percent_value
 
         return pid_to_cpu_percent_map
 

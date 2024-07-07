@@ -1,5 +1,12 @@
 import "@/styles/App.scss"
-import { Config, HistoryRecord, Process, request } from "@/utils/request"
+import {
+  Config,
+  downloadHistory,
+  HistoryRecord,
+  loadHistory,
+  Process,
+  request,
+} from "@/utils/request"
 import {
   Button,
   ButtonGroup,
@@ -17,6 +24,7 @@ let version = 0
 let processes: Process[] = []
 let config: Config = {} as Config
 let lastUpdate = new Date()
+let isPaused = false
 
 const GenericOptions: EChartsOption = {
   animation: false,
@@ -281,11 +289,19 @@ function App() {
         name: "all",
         label: "总值",
       })
+      if (config.shouldShowTotalOnly) {
+        processes = [processes[0]]
+      }
       manualUpdate()
     }
   }
 
   async function handleRefreshData() {
+    if (isPaused) {
+      setTimeout(handleRefreshData, config.pageUpdateIntervalMillis)
+      return
+    }
+
     const offset = records.length
     const response = await request.getHistory({
       offset: offset,
@@ -296,10 +312,10 @@ function App() {
     lastUpdate = new Date()
     manualUpdate()
     if (responseRecords.length === 0) {
-      setTimeout(handleRefreshData, 1000)
+      setTimeout(handleRefreshData, config.pageUpdateIntervalMillis)
       return
     }
-    setTimeout(handleRefreshData, 1000)
+    setTimeout(handleRefreshData, config.pageUpdateIntervalMillis)
     records = [...records, ...responseRecords]
   }
 
@@ -322,8 +338,70 @@ function App() {
     )
   }
 
+  function setPaused(value: boolean) {
+    isPaused = value
+    manualUpdate()
+  }
+
   function handleRefresh() {
     window.location.reload()
+  }
+
+  function handleDownloadData() {
+    downloadHistory().then((response) => {
+      const historyFullText = response.fullHistory
+      downloadString(
+        `history-${config.targetProcessName}.csv`,
+        "text/csv",
+        historyFullText
+      )
+    })
+  }
+
+  function downloadString(filename: string, mimeType: string, text: string) {
+    const pom = document.createElement("a")
+    pom.setAttribute(
+      "href",
+      `data:${mimeType};charset=utf-8,` + encodeURIComponent(text)
+    )
+    pom.setAttribute("download", filename)
+    pom.click()
+  }
+
+  function handleClearScreen() {
+    records = []
+    manualUpdate()
+  }
+
+  function handleLoadData() {
+    setPaused(false)
+    openFile().then((file) => {
+      file.text().then((text) => {
+        records = []
+        loadHistory(text).then(() => {
+          setTimeout(() => {
+            setPaused(true)
+          }, config.pageUpdateIntervalMillis)
+        })
+      })
+    })
+  }
+
+  function openFile(): Promise<File> {
+    const input = document.createElement("input")
+    input.type = "file"
+    const ret = new Promise((resolve, reject) => {
+      input.onchange = () => {
+        const files = input.files
+        if (!files || files.length === 0) {
+          reject("No file selected")
+          return
+        }
+        resolve(files[0])
+      }
+    })
+    input.click()
+    return ret as Promise<File>
   }
 
   function handleSwitchTheme() {
@@ -332,6 +410,7 @@ function App() {
 
   useEffect(() => {
     reloadConfig().then(reloadProcesses).then(handleRefreshData)
+    // eslint-disable-next-line
   }, [])
 
   const dataPairs = [
@@ -345,6 +424,7 @@ function App() {
     processes.length === 0 || records.length === 0 ? (
       <center>
         <CircularProgress />
+        暂无数据，初次加载数据会有点慢~
       </center>
     ) : (
       processes.map(makeProcessCard)
@@ -353,10 +433,12 @@ function App() {
   return (
     <>
       <div className="header">
-        <div className="title">{config.targetProcessName}</div>
+        <div className="title">
+          {config.targetProcessName} {isPaused && <Chip>已暂停更新</Chip>}
+        </div>
         <div className="right-part">\^O^/</div>
       </div>
-      <Card className="data-card">
+      <Card className="data-card" key={count}>
         <div className="data-area">
           {dataPairs.map((pair, i) => (
             <div key={i} className="data-pair">
@@ -370,9 +452,13 @@ function App() {
           <div className="sub-button-area">
             <Button onClick={handleRefresh}>刷新页面</Button>
             <ButtonGroup>
-              <Button>保存数据</Button>
-              <Button>载入数据</Button>
+              <Button onClick={handleDownloadData}>保存数据</Button>
+              <Button onClick={handleLoadData}>载入数据</Button>
             </ButtonGroup>
+            <Button onClick={() => setPaused(!isPaused)}>
+              {isPaused ? "恢复更新" : "暂停更新"}
+            </Button>
+            <Button onClick={handleClearScreen}>清屏</Button>
           </div>
           <div className="sub-button-area">
             <Button color="danger" onClick={handleSwitchTheme}>

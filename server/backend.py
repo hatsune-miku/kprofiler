@@ -1,8 +1,12 @@
 from fastapi import FastAPI, APIRouter, staticfiles
 from fastapi.middleware.cors import CORSMiddleware
 from core import kprofiler, process_map as pmap, history as phistory
+from pydantic import BaseModel
 import uvicorn
-import time
+
+
+class LoadHistoryRequest(BaseModel):
+    full_history: str
 
 
 def _create_fastapi_app(router: APIRouter) -> FastAPI:
@@ -33,6 +37,8 @@ class KProfilerBackend:
         router.add_api_route("/api/config", self.get_config, methods=["GET"])
         router.add_api_route("/api/history", self.get_history, methods=["GET"])
         router.add_api_route("/api/processes", self.get_processes, methods=["GET"])
+        router.add_api_route("/api/download", self.request_download, methods=["POST"])
+        router.add_api_route("/api/load", self.request_load, methods=["POST"])
         self.router = router
 
         app = _create_fastapi_app(self.router)
@@ -109,6 +115,16 @@ class KProfilerBackend:
                 )
             )
         }
+
+    def request_download(self):
+        full_history = self.history.serialize()
+        return {"fullHistory": full_history}
+
+    def request_load(self, data: LoadHistoryRequest):
+        self.history.parse_and_load(
+            data.full_history,
+            history_upperbound=self.profiler.config.history_upperbound,
+        )
 
     def run(self):
         uvicorn.run(self.app, host="0.0.0.0", port=6308)

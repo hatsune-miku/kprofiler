@@ -7,7 +7,7 @@ import useDarkMode from "use-dark-mode"
 const root = document.getElementById("root")!
 window.global = globalThis
 
-function Main() {
+export function Main() {
   const darkMode = useDarkMode(false)
 
   return (
