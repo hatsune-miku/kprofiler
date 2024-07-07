@@ -113,6 +113,7 @@ class KProfilerWorker:
         wset_mb_total = 0
         pwset_mb_total = 0
 
+        start = time.time()
         for i, process in enumerate(processes):
             memory_utilization = self.cpu_helper.query_process(process)
             cpu_percent = cpu_percents[i]
@@ -140,6 +141,10 @@ class KProfilerWorker:
                 cpu_percent=cpu_percent,
                 gpu_percent=gpu_percent,
             )
+
+        elapsed_seconds = time.time() - start
+        print(f"Elapsed seconds: {elapsed_seconds}")
+
         self.history.add_record(
             process=ProcessKind(pid=0, name=self.config.target, label="总值"),
             memory_utilization=MemoryUtilization(

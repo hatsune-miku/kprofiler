@@ -35,7 +35,7 @@ class KProfiler:
             subscriber()
 
     def reload_processes(self, skip_optimization: bool = False) -> None:
-        diff = self._new_processes_diff(
+        diff = self._diff_processes(
             current=self.process_map.processes,
             next_state=self.list_processes(self.config.target),
         )
@@ -46,7 +46,7 @@ class KProfiler:
         self.processes = diff.current_processes
         self.process_map.update_processes(self.processes)
         self.trigger_subscribers()
-
+  
     def start(self) -> None:
         self.worker.start()
 
@@ -60,7 +60,7 @@ class KProfiler:
         return ProcessUtils.get_processes_by_name(target)
 
     @staticmethod
-    def _new_processes_diff(
+    def _diff_processes(
         current: List[Process], next_state: List[Process]
     ) -> ProcessDiff:
         """

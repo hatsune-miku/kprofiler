@@ -1,7 +1,10 @@
 import ctypes
 import time
 import re
-from typing import List, Dict
+from typing import List, Dict, NamedTuple
+
+
+PDH_MORE_DATA = 0x800007D2
 
 
 class COUNTERVALUE_DATA(ctypes.Union):
@@ -19,6 +22,11 @@ class PDH_FMT_COUNTERVALUE(ctypes.Structure):
         ("CStatus", ctypes.c_ulong),
         ("data", COUNTERVALUE_DATA),
     ]
+
+
+class InstanceCounterHandle(NamedTuple):
+    instance: str
+    counter_handle: ctypes.c_void_p
 
 
 class PerformanceCounter:
@@ -75,7 +83,8 @@ class PerformanceCounter:
 
     def __init__(self) -> None:
         self.pdh = self._prepare_pdh()
-        self.pid_instance_cache = {}
+        self.query_handle = None
+        self.pid_to_instance_counter_handle: Dict[int, InstanceCounterHandle] = {}
 
     def _pid_from_instance(self, instance: str) -> int:
         pid = self.PID_PATTERN.search(instance)
@@ -85,8 +94,8 @@ class PerformanceCounter:
 
     def _get_gpu_instances(self, pids: List[int]) -> List[str]:
         # Return early if all instances are already cached
-        if all(pid in self.pid_instance_cache for pid in pids):
-            return [self.pid_instance_cache[pid] for pid in pids]
+        if all(pid in self.pid_to_instance_counter_handle for pid in pids):
+            return [self.pid_to_instance_counter_handle[pid] for pid in pids]
 
         counter_list_buffer_size = ctypes.c_ulong(0)
         instance_list_buffer_size = ctypes.c_ulong(0)
@@ -102,7 +111,7 @@ class PerformanceCounter:
             0,
             0,
         )
-        if status != 0x800007D2:  # PDH_MORE_DATA
+        if status != PDH_MORE_DATA:
             self._assert_status(status)
 
         counter_list_buffer = ctypes.create_string_buffer(
@@ -130,37 +139,49 @@ class PerformanceCounter:
         filtered_instances = []
         for instance in instances:
             pid = self._pid_from_instance(instance)
-            self.pid_instance_cache[pid] = instance
             if pid in pids:
                 filtered_instances.append(instance)
         return filtered_instances
 
     def get_pid_to_gpu_percent_map(self, pids: List[int]) -> Dict[int, float]:
-        query_handle = ctypes.c_void_p()
-        self._assert_status(
-            self.pdh.PdhOpenQueryA(None, None, ctypes.byref(query_handle))
-        )
+        if not self.query_handle:
+            self.query_handle = ctypes.c_void_p()
+            self._assert_status(
+                self.pdh.PdhOpenQueryA(None, None, ctypes.byref(self.query_handle))
+            )
 
         counter_handles = []
         gpu_instances = self._get_gpu_instances(pids)
         for instance in gpu_instances:
-            counter_path = f"\\GPU Engine({instance})\\Utilization Percentage".encode(
-                "ascii"
+            pid = self._pid_from_instance(instance)
+            cached_instance_counter_handle = self.pid_to_instance_counter_handle.get(
+                pid
             )
-            counter_handle = ctypes.c_void_p()
-            self._assert_status(
-                self.pdh.PdhAddCounterA(
-                    query_handle,
-                    ctypes.c_char_p(counter_path),
-                    None,
-                    ctypes.byref(counter_handle),
+            if cached_instance_counter_handle is not None:
+                counter_handles.append(
+                    (instance, cached_instance_counter_handle.counter_handle)
                 )
-            )
-            counter_handles.append((instance, counter_handle))
+            else:
+                counter_path = (
+                    f"\\GPU Engine({instance})\\Utilization Percentage".encode("ascii")
+                )
+                counter_handle = ctypes.c_void_p()
+                self._assert_status(
+                    self.pdh.PdhAddCounterA(
+                        self.query_handle,
+                        ctypes.c_char_p(counter_path),
+                        None,
+                        ctypes.byref(counter_handle),
+                    )
+                )
+                counter_handles.append((instance, counter_handle))
+                self.pid_to_instance_counter_handle[pid] = InstanceCounterHandle(
+                    instance=instance,
+                    counter_handle=counter_handle,
+                )
+                self._assert_status(self.pdh.PdhCollectQueryData(self.query_handle))
 
-        self._assert_status(self.pdh.PdhCollectQueryData(query_handle))
-        time.sleep(1)
-        self._assert_status(self.pdh.PdhCollectQueryData(query_handle))
+        self._assert_status(status=self.pdh.PdhCollectQueryData(self.query_handle))
 
         pid_to_gpu_percent_map = {}
 
@@ -175,12 +196,9 @@ class PerformanceCounter:
                     ctypes.byref(counter_value),
                 )
             )
-            instance = str(instance)
-            pid = self._pid_from_instance(instance=instance)
+            pid = self._pid_from_instance(instance)
             if pid not in pid_to_gpu_percent_map:
                 pid_to_gpu_percent_map[pid] = counter_value.data.doubleValue
             else:
                 pid_to_gpu_percent_map[pid] += counter_value.data.doubleValue
-
-        self.pdh.PdhCloseQuery(query_handle)
         return pid_to_gpu_percent_map

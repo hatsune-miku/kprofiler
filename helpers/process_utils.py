@@ -3,6 +3,7 @@ import time
 import os
 from typing import List
 
+PHYSICAL_CPU_COUNT = psutil.cpu_count(logical=False)
 
 class ProcessUtils:
     @staticmethod
@@ -12,7 +13,7 @@ class ProcessUtils:
     @staticmethod
     def get_process_cpu_percent(process: psutil.Process) -> float:
         percent = process.cpu_percent()
-        return percent / psutil.cpu_count(logical=False)
+        return percent / PHYSICAL_CPU_COUNT
 
     @staticmethod
     def get_processes_cpu_percent(processes: List[psutil.Process]) -> List[float]:

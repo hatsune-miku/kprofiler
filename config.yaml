@@ -23,7 +23,7 @@ latest_record_count: 100
 
 # 是否停用 GPU 监控、换来更快的更新速度，true 为开启，false 为关闭
 # 默认：true
-disable_gpu: true
+disable_gpu: false
 
 # 是否只看总值、忽略子进程，true 为开启，false 为关闭
 # 默认：false
