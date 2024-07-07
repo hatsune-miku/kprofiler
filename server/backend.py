@@ -39,6 +39,7 @@ class KProfilerBackend:
         router.add_api_route("/api/processes", self.get_processes, methods=["GET"])
         router.add_api_route("/api/download", self.request_download, methods=["POST"])
         router.add_api_route("/api/load", self.request_load, methods=["POST"])
+        router.add_api_route("/api/clear", self.request_clear, methods=["POST"])
         self.router = router
 
         app = _create_fastapi_app(self.router)
@@ -103,6 +104,7 @@ class KProfilerBackend:
         }
 
     def get_processes(self):
+        self.profiler.reload_processes()
         return {
             "processes": list(
                 map(
@@ -125,6 +127,9 @@ class KProfilerBackend:
             data.full_history,
             history_upperbound=self.profiler.config.history_upperbound,
         )
+
+    def request_clear(self):
+        self.history.records.clear()
 
     def run(self):
         uvicorn.run(self.app, host="0.0.0.0", port=6308)

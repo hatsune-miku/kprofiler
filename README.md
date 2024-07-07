@@ -18,6 +18,9 @@
 git clone https://github.com/hatsune-miku/kprofiler.git
 cd kprofiler
 pip install -r requirements.txt
+cd frontend
+yarn && yarn build
+cd ..
 ```
 
 ### 2. 启动 html_pc 项目
@@ -34,4 +37,4 @@ python main.py
 
 ## Demo
 
-![Demo 1](doc/demo2.jpg)
+![Demo 1](doc/demo3.jpg)

@@ -137,6 +137,10 @@ export async function loadHistory(fullHistory: string): Promise<void> {
   })
 }
 
+export async function requestClearHistory(): Promise<void> {
+  await post<void>("/api/clear", {})
+}
+
 export const request = {
   getConfig,
   getHistory,

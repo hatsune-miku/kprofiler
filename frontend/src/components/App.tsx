@@ -6,6 +6,7 @@ import {
   loadHistory,
   Process,
   request,
+  requestClearHistory,
 } from "@/utils/request"
 import {
   Button,
@@ -284,6 +285,9 @@ function App() {
     const result = await request.getProcesses()
     if (result.processes) {
       processes = result.processes
+      if (processes.length === 0) {
+        return
+      }
       processes.unshift({
         processId: 0,
         name: "all",
@@ -311,6 +315,7 @@ function App() {
     const responseRecords = response.history?.records ?? []
     lastUpdate = new Date()
     manualUpdate()
+    reloadProcesses()
     if (responseRecords.length === 0) {
       setTimeout(handleRefreshData, config.pageUpdateIntervalMillis)
       return
@@ -371,6 +376,7 @@ function App() {
   function handleClearScreen() {
     records = []
     manualUpdate()
+    requestClearHistory()
   }
 
   function handleLoadData() {
@@ -421,7 +427,9 @@ function App() {
   ]
 
   const dataArea =
-    processes.length === 0 || records.length === 0 ? (
+    processes.length === 0 ? (
+      <center>未检测到目标进程，请先运行 {config.targetProcessName}</center>
+    ) : records.length === 0 ? (
       <center>
         <CircularProgress />
         暂无数据，初次加载数据会有点慢~
