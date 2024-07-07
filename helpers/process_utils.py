@@ -1,5 +1,4 @@
 import psutil
-import time
 import os
 from typing import List
 
@@ -8,7 +7,15 @@ PHYSICAL_CPU_COUNT = psutil.cpu_count(logical=False)
 class ProcessUtils:
     @staticmethod
     def get_processes_by_name(name: str) -> List[psutil.Process]:
-        return [p for p in psutil.process_iter() if name == p.name()]
+        processes = []
+        iterator = psutil.process_iter()
+        for process in iterator:
+            try:
+                if process.name() == name:
+                    processes.append(process)
+            except:
+                pass
+        return processes
 
     @staticmethod
     def get_process_cpu_percent(process: psutil.Process) -> float:
