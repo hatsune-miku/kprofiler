@@ -84,6 +84,10 @@ class PerformanceCounter:
     def __init__(self) -> None:
         self.pdh: ctypes.WinDLL = self._prepare_pdh()
         self.pid_instance_cache: Dict[int, InstanceCounterHandle] = {}
+        self.query_handle = ctypes.c_void_p()
+        self._assert_status(
+            self.pdh.PdhOpenQueryA(None, None, ctypes.byref(self.query_handle))
+        )
 
     def _pid_from_instance(self, instance: str) -> int:
         pid = self.PID_PATTERN.search(instance)
@@ -143,11 +147,6 @@ class PerformanceCounter:
         return filtered_instances
 
     def get_pid_to_gpu_percent_map(self, pids: List[int]) -> Dict[int, float]:
-        query_handle = ctypes.c_void_p()
-        self._assert_status(
-            self.pdh.PdhOpenQueryA(None, None, ctypes.byref(query_handle))
-        )
-
         counter_handles = []
         gpu_instances = self._get_gpu_instances(pids)
         for instance in gpu_instances:
@@ -165,7 +164,7 @@ class PerformanceCounter:
                 counter_handle = ctypes.c_void_p()
                 self._assert_status(
                     self.pdh.PdhAddCounterA(
-                        query_handle,
+                        self.query_handle,
                         ctypes.c_char_p(counter_path),
                         None,
                         ctypes.byref(counter_handle),
@@ -175,9 +174,9 @@ class PerformanceCounter:
                 self.pid_instance_cache[pid] = InstanceCounterHandle(
                     instance=instance, counter_handle=counter_handle
                 )
-                self.pdh.PdhCollectQueryData(query_handle)
+                self.pdh.PdhCollectQueryData(self.query_handle)
 
-        self._assert_status(self.pdh.PdhCollectQueryData(query_handle))
+        self._assert_status(self.pdh.PdhCollectQueryData(self.query_handle))
 
         pid_to_gpu_percent_map = {}
 
