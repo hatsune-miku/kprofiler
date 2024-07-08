@@ -21,7 +21,9 @@ import { useEffect, useState } from "react"
 import useDarkMode from "use-dark-mode"
 import SSProgress from "./SSProgress"
 
+let records: HistoryRecord[] = []
 let version = 0
+let processes: Process[] = []
 let config: Config = {} as Config
 let isPaused = false
 
@@ -54,8 +56,6 @@ const GenericOptions: EChartsOption = {
 function App() {
   const [count, setCount] = useState(0)
   const [lastUpdate, setLastUpdate] = useState(new Date())
-  const [records, setRecords] = useState<HistoryRecord[]>([])
-  const [processes, setProcesses] = useState<Process[]>([])
   const darkMode = useDarkMode(false)
   const [minutesInput, setMinutesInput] = useState("")
   const [pauseAt, setPauseAt] = useState(0)
@@ -287,7 +287,7 @@ function App() {
   async function reloadProcesses() {
     const result = await request.getProcesses()
     if (result.processes) {
-      setProcesses(result.processes)
+      processes = result.processes
       if (processes.length === 0) {
         return
       }
@@ -297,7 +297,7 @@ function App() {
         label: "总值",
       })
       if (config.shouldShowTotalOnly) {
-        setProcesses([processes[0]])
+        processes = [processes[0]]
       }
       manualUpdate()
     }
@@ -333,7 +333,7 @@ function App() {
       return
     }
     scheduleNextCall()
-    setRecords((records) => [...records, ...responseRecords])
+    records = [...records, ...responseRecords]
   }
 
   function makeProcessCard(process: Process, i: number) {
@@ -386,7 +386,7 @@ function App() {
   }
 
   function handleClearScreen() {
-    setRecords([])
+    records = []
     manualUpdate()
     requestClearHistory()
   }
@@ -395,7 +395,7 @@ function App() {
     setPaused(false)
     openFile().then((file) => {
       file.text().then((text) => {
-        setRecords([])
+        records = []
         loadHistory(text).then(() => {
           setTimeout(() => {
             setPaused(true)
