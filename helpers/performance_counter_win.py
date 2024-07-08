@@ -193,7 +193,7 @@ class PerformanceCounter:
                 )
                 self.pdh.PdhCollectQueryData(self.cpu_query_handle)
 
-        self._assert_status(self.pdh.PdhCollectQueryData(self.cpu_query_handle))
+        self.pdh.PdhCollectQueryData(self.cpu_query_handle)
         pid_to_cpu_percent_map = {}
 
         for process, counter_handle in process_counter_handle_pairs:
@@ -248,7 +248,7 @@ class PerformanceCounter:
                 )
                 self.pdh.PdhCollectQueryData(self.gpu_query_handle)
 
-        self._assert_status(self.pdh.PdhCollectQueryData(self.gpu_query_handle))
+        self.pdh.PdhCollectQueryData(self.gpu_query_handle)
 
         pid_to_gpu_percent_map = {}
 
