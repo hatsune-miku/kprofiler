@@ -13,13 +13,13 @@ import {
   ButtonGroup,
   Card,
   Chip,
-  CircularProgress,
   Divider,
   Input,
 } from "@nextui-org/react"
 import ReactECharts, { EChartsOption } from "echarts-for-react"
 import { useEffect, useState } from "react"
 import useDarkMode from "use-dark-mode"
+import SSProgress from "./SSProgress"
 
 let records: HistoryRecord[] = []
 let version = 0
@@ -463,10 +463,13 @@ function App() {
 
   const dataArea =
     processes.length === 0 ? (
-      <center>未检测到目标进程，请先运行 {config.targetProcessName}</center>
+      <center>
+        <SSProgress className="progress" />
+        等待目标 {config.targetProcessName} 运行...
+      </center>
     ) : records.length === 0 ? (
       <center>
-        <CircularProgress />
+        <SSProgress className="progress" />
         暂无数据，初次加载数据会有点慢~
       </center>
     ) : (
