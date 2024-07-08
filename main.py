@@ -26,11 +26,6 @@ def main():
     profiler.start()
 
     if profiler.config.realtime_diagram:
-        # server = DashServer(
-        #     history, profiler.process_map, profiler.worker, profiler.config
-        # )
-        # profiler.subscribe_to_process_change(server.notify_processes_updated)
-        # profiler.trigger_subscribers()
         Thread(
             target=lambda: time.sleep(0.25)
             or webbrowser.open(
