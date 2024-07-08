@@ -175,13 +175,11 @@ class PerformanceCounter:
             else:
                 counter_path = f"\\Process({name}*)\\% Processor Time".encode("ascii")
                 counter_handle = ctypes.c_void_p()
-                self._assert_status(
-                    self.pdh.PdhAddCounterA(
-                        self.cpu_query_handle,
-                        ctypes.c_char_p(counter_path),
-                        None,
-                        ctypes.byref(counter_handle),
-                    )
+                self.pdh.PdhAddCounterA(
+                    self.cpu_query_handle,
+                    ctypes.c_char_p(counter_path),
+                    None,
+                    ctypes.byref(counter_handle),
                 )
                 process_counter_handle_pairs.append((process, counter_handle))
                 self.cpu_process_counter_cache[process] = ProcessCounterHandle(
@@ -195,13 +193,11 @@ class PerformanceCounter:
         for process, counter_handle in process_counter_handle_pairs:
             counter_value = PDH_FMT_COUNTERVALUE()
             counter_type = ctypes.c_ulong()
-            self._assert_status(
-                self.pdh.PdhGetFormattedCounterValue(
-                    counter_handle,
-                    self.PDH_FMT_DOUBLE,
-                    ctypes.byref(counter_type),
-                    ctypes.byref(counter_value),
-                )
+            self.pdh.PdhGetFormattedCounterValue(
+                counter_handle,
+                self.PDH_FMT_DOUBLE,
+                ctypes.byref(counter_type),
+                ctypes.byref(counter_value),
             )
             pid = process.pid
             percent_value = counter_value.data.doubleValue / psutil.cpu_count(
