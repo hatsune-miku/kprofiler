@@ -68,8 +68,12 @@ function App() {
     const timestamps = processRecords.map((record) =>
       new Date(record.timestampSeconds * 1000).toLocaleString()
     )
-    const cpuValues = processRecords.map((record) => record.cpuPercentage)
-    const gpuValues = processRecords.map((record) => record.gpuPercentage)
+    const cpuValues = processRecords.map((record) =>
+      record.cpuPercentage.toFixed(2)
+    )
+    const gpuValues = processRecords.map((record) =>
+      record.gpuPercentage.toFixed(2)
+    )
     return {
       ...GenericOptions,
       title: {
@@ -156,16 +160,16 @@ function App() {
       (record) => record.process.processId === process.processId
     )
     const timestamps = processRecords.map((record) =>
-      new Date(record.timestampSeconds * 1000).toLocaleString()
+      new Date(record.timestampSeconds * 1000).toDateString()
     )
-    const ussValues = processRecords.map(
-      (record) => record.memoryUtilization.uniqueSetSize
+    const ussValues = processRecords.map((record) =>
+      record.memoryUtilization.uniqueSetSize.toFixed(2)
     )
-    const rssValues = processRecords.map(
-      (record) => record.memoryUtilization.residentSetSize
+    const rssValues = processRecords.map((record) =>
+      record.memoryUtilization.residentSetSize.toFixed(2)
     )
-    const vssValues = processRecords.map(
-      (record) => record.memoryUtilization.virtualSize
+    const vssValues = processRecords.map((record) =>
+      record.memoryUtilization.virtualSize.toFixed(2)
     )
 
     return {
