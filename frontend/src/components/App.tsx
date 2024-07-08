@@ -171,7 +171,7 @@ function App() {
     return {
       ...GenericOptions,
       title: {
-        text: "内存占用",
+        text: "内存占用 (MB)",
       },
       xAxis: {
         type: "category",
