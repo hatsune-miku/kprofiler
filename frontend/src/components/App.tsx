@@ -15,6 +15,7 @@ import {
   Chip,
   CircularProgress,
   Divider,
+  Input,
 } from "@nextui-org/react"
 import ReactECharts, { EChartsOption } from "echarts-for-react"
 import { useEffect, useState } from "react"
@@ -24,7 +25,6 @@ let records: HistoryRecord[] = []
 let version = 0
 let processes: Process[] = []
 let config: Config = {} as Config
-let lastUpdate = new Date()
 let isPaused = false
 
 const GenericOptions: EChartsOption = {
@@ -55,7 +55,10 @@ const GenericOptions: EChartsOption = {
 
 function App() {
   const [count, setCount] = useState(0)
+  const [lastUpdate, setLastUpdate] = useState(new Date())
   const darkMode = useDarkMode(false)
+  const [minutesInput, setMinutesInput] = useState("")
+  const [pauseAt, setPauseAt] = useState(0)
   const manualUpdate = () => setCount((prev) => prev + 1)
 
   function makeCpuGpuOptionFor(process: Process): EChartsOption {
@@ -301,8 +304,18 @@ function App() {
   }
 
   async function handleRefreshData() {
-    if (isPaused) {
+    const scheduleNextCall = () =>
       setTimeout(handleRefreshData, config.pageUpdateIntervalMillis)
+
+    if (pauseAt !== 0 && new Date().getTime() > pauseAt) {
+      setPauseAt(0)
+      setPaused(true)
+      scheduleNextCall()
+      return
+    }
+
+    if (isPaused) {
+      scheduleNextCall()
       return
     }
 
@@ -313,14 +326,13 @@ function App() {
     })
     version = response.version ?? version
     const responseRecords = response.history?.records ?? []
-    lastUpdate = new Date()
-    manualUpdate()
+    setLastUpdate(new Date())
     reloadProcesses()
     if (responseRecords.length === 0) {
-      setTimeout(handleRefreshData, config.pageUpdateIntervalMillis)
+      scheduleNextCall()
       return
     }
-    setTimeout(handleRefreshData, config.pageUpdateIntervalMillis)
+    scheduleNextCall()
     records = [...records, ...responseRecords]
   }
 
@@ -414,6 +426,24 @@ function App() {
     darkMode.toggle()
   }
 
+  function handleToggleCountdown() {
+    const isCountingDown = pauseAt !== 0
+    if (isCountingDown) {
+      setPauseAt(0)
+      return
+    }
+    const currentTimestampMillis = new Date().getTime()
+    try {
+      const minutes = Number.parseInt(minutesInput)
+      if (Number.isSafeInteger(minutes)) {
+        setPauseAt(currentTimestampMillis + minutes * 60 * 1000)
+      }
+    } catch {
+      setPauseAt(0)
+      setMinutesInput("")
+    }
+  }
+
   useEffect(() => {
     reloadConfig().then(reloadProcesses).then(handleRefreshData)
     // eslint-disable-next-line
@@ -423,7 +453,12 @@ function App() {
     { name: "最后更新", value: lastUpdate.toLocaleString() },
     { name: "进程数量", value: processes.length },
     { name: "总数据量", value: records.length },
-    { name: "刷新间隔", value: `${config.pageUpdateIntervalMillis}ms` },
+    {
+      name: "刷新间隔",
+      value: config.pageUpdateIntervalMillis
+        ? `${config.pageUpdateIntervalMillis}ms`
+        : "N/A",
+    },
   ]
 
   const dataArea =
@@ -444,7 +479,7 @@ function App() {
         <div className="title">
           {config.targetProcessName} {isPaused && <Chip>已暂停更新</Chip>}
         </div>
-        <div className="right-part">\^O^/</div>
+        <div className="right-part">&#9825; KProfiler \^O^/</div>
       </div>
       <Card className="data-card" key={count}>
         <div className="data-area">
@@ -467,6 +502,25 @@ function App() {
               {isPaused ? "恢复更新" : "暂停更新"}
             </Button>
             <Button onClick={handleClearScreen}>清屏</Button>
+          </div>
+          <div className="sub-button-area">
+            <Input
+              label="计时"
+              disabled={pauseAt !== 0}
+              placeholder="输入分钟数"
+              endContent={
+                <Button size="sm" onClick={handleToggleCountdown}>
+                  {pauseAt !== 0 ? "停止计时" : "开始计时"}
+                </Button>
+              }
+              value={
+                pauseAt !== 0
+                  ? `将于 ${new Date(pauseAt).toTimeString()} 结束`
+                  : minutesInput
+              }
+              onChange={(e) => setMinutesInput(e.target.value)}
+              size="sm"
+            />
           </div>
           <div className="sub-button-area">
             <Button color="danger" onClick={handleSwitchTheme}>
