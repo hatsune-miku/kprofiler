@@ -18,8 +18,8 @@
 git clone https://github.com/hatsune-miku/kprofiler.git
 cd kprofiler
 pip install -r requirements.txt
-cd frontend
-yarn && yarn build
+cd frontend # 这步可以省略
+yarn && yarn build # 这步也可以省略，因为前端已经预先编译好
 cd ..
 ```
 
