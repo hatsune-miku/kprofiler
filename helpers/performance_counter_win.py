@@ -93,6 +93,7 @@ class PerformanceCounter:
         self.cpu_process_counter_cache: Dict[psutil.Process, ProcessCounterHandle] = {}
         self.cpu_query_handle = ctypes.c_void_p()
         self.gpu_query_handle = ctypes.c_void_p()
+        self.cpu_process_recent_history: Dict[int, List[float]] = {}
         self._assert_status(
             self.pdh.PdhOpenQueryA(None, None, ctypes.byref(self.cpu_query_handle))
         )
@@ -112,6 +113,11 @@ class PerformanceCounter:
         if pid is None:
             raise Exception(f"Could not find PID in instance name: {instance}")
         return int(pid.group())
+
+    def _get_recent_n_records(self, pid: int, n: int) -> List[float]:
+        if pid not in self.cpu_process_recent_history:
+            self.cpu_process_recent_history[pid] = []
+        return self.cpu_process_recent_history[pid][-n:]
 
     def _get_gpu_instances(self, pids: List[int]) -> List[str]:
         counter_list_buffer_size = ctypes.c_ulong(0)
@@ -164,7 +170,7 @@ class PerformanceCounter:
         self, processes: List[psutil.Process]
     ) -> Dict[int, float]:
         process_counter_handle_pairs: List[Tuple[psutil.Process, ctypes.c_void_p]] = []
-        for process in processes:
+        for i, process in enumerate(processes):
             name = process.name().strip(".exe")
 
             cached_process = self.cpu_process_counter_cache.get(process)
@@ -173,7 +179,10 @@ class PerformanceCounter:
                     (cached_process.process, cached_process.counter_handle)
                 )
             else:
-                counter_path = f"\\Process({name}*)\\% Processor Time".encode("ascii")
+                process_name = name if i == 0 else f"{name}#{i}"
+                counter_path = f"\\Process({process_name})\\% Processor Time".encode(
+                    "ascii"
+                )
                 counter_handle = ctypes.c_void_p()
                 self._assert_status(
                     self.pdh.PdhAddCounterA(
@@ -205,8 +214,12 @@ class PerformanceCounter:
             )
             pid = process.pid
             percent_value = counter_value.data.doubleValue / psutil.cpu_count(
-                logical=True
+                logical=False
             )
+            if pid not in self.cpu_process_recent_history:
+                self.cpu_process_recent_history[pid] = []
+            self.cpu_process_recent_history[pid].append(percent_value)
+            percent_value = sum(self._get_recent_n_records(pid, 5))
             pid_to_cpu_percent_map[pid] = percent_value
 
         return pid_to_cpu_percent_map

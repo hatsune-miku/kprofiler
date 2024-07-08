@@ -40,10 +40,10 @@ advanced:
   history_upperbound: 50000
 
   # 后台线程多久重新加载一次 GPU 百分比的数据，单位：毫秒
-  gpu_duration_millis: 1000
+  gpu_duration_millis: 250
 
   # 后台线程多久重新加载一次 CPU 百分比的数据，单位：毫秒
-  cpu_duration_millis: 1000
+  cpu_duration_millis: 250
 
   # 启动参数中包含什么样的关键字，将其标记为什么样的进程
   label_criteria:
