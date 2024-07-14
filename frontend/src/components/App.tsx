@@ -15,6 +15,14 @@ import {
   Chip,
   Divider,
   Input,
+  Kbd,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  Tooltip,
+  useDisclosure,
 } from "@nextui-org/react"
 import ReactECharts, { EChartsOption } from "echarts-for-react"
 import { useEffect, useState } from "react"
@@ -59,6 +67,11 @@ function App() {
   const darkMode = useDarkMode(false)
   const [minutesInput, setMinutesInput] = useState("")
   const [pauseAt, setPauseAt] = useState(0)
+  const {
+    isOpen: shouldConfirmOpen,
+    onOpen: openConfirm,
+    onOpenChange: onConfirmOpenChanged,
+  } = useDisclosure()
   const manualUpdate = () => setCount((prev) => prev + 1)
 
   function makeCpuGpuOptionFor(process: Process): EChartsOption {
@@ -500,15 +513,30 @@ function App() {
         <Divider className="divider" />
         <div className="button-area">
           <div className="sub-button-area">
-            <Button onClick={handleRefresh}>刷新页面</Button>
+            <Tooltip
+              color="danger"
+              content={
+                <span>
+                  等效于 <Kbd>F5</Kbd>, <Kbd>Ctrl+R</Kbd> 或是{" "}
+                  <Kbd keys={["command"]}>R</Kbd>
+                </span>
+              }
+            >
+              <Button onClick={handleRefresh}>刷新页面</Button>
+            </Tooltip>
             <ButtonGroup>
               <Button onClick={handleDownloadData}>保存数据</Button>
               <Button onClick={handleLoadData}>载入数据</Button>
             </ButtonGroup>
-            <Button onClick={() => setPaused(!isPaused)}>
-              {isPaused ? "恢复更新" : "暂停更新"}
-            </Button>
-            <Button onClick={handleClearScreen}>清屏</Button>
+            <Tooltip
+              color="danger"
+              content="仅仅暂停本前端的数据更新。恢复后，会一口气同步暂停期间的所有数据。"
+            >
+              <Button onClick={() => setPaused(!isPaused)}>
+                {isPaused ? "恢复更新" : "暂停更新"}
+              </Button>
+            </Tooltip>
+            <Button onClick={openConfirm}>清屏</Button>
           </div>
           <div className="sub-button-area">
             <Input
@@ -537,6 +565,39 @@ function App() {
         </div>
       </Card>
       {dataArea}
+      <Modal isOpen={shouldConfirmOpen} onOpenChange={onConfirmOpenChanged}>
+        <ModalContent>
+          {(closeConfirm) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                清空数据
+              </ModalHeader>
+              <ModalBody>
+                <p>确定要清空数据吗？</p>
+                <p>
+                  这会导致
+                  <span style={{ color: "red", fontWeight: "bold" }}>
+                    服务端历史记录清空
+                  </span>
+                  ，所有前端都会受到影响。
+                </p>
+              </ModalBody>
+              <ModalFooter>
+                <Button
+                  color="danger"
+                  onPress={() => {
+                    closeConfirm()
+                    handleClearScreen()
+                  }}
+                >
+                  清空
+                </Button>
+                <Button onPress={closeConfirm}>取消</Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </>
   )
 }
