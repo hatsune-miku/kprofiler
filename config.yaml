@@ -37,7 +37,8 @@ advanced:
   port: 6308
 
   # 内存中最多保留多少条记录
-  history_upperbound: 50000
+  # TODO: 修一下这个量一带一路的问题
+  history_upperbound: 5000000
 
   # 后台线程多久重新加载一次 GPU 百分比的数据，单位：毫秒
   gpu_duration_millis: 500

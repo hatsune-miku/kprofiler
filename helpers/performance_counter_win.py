@@ -108,6 +108,17 @@ class PerformanceCounter:
         except:
             pass
 
+    def invalidate_cache(self):
+        self.cpu_process_counter_cache = {}
+        self.gpu_process_counter_cache = {}
+        self._assert_status(
+            self.pdh.PdhOpenQueryA(None, None, ctypes.byref(self.cpu_query_handle))
+        )
+        self._assert_status(
+            self.pdh.PdhOpenQueryA(None, None, ctypes.byref(self.gpu_query_handle))
+        )
+        print("Reloaded performance counter cache")
+
     def _pid_from_instance(self, instance: str) -> int:
         pid = self.PID_PATTERN.search(instance)
         if pid is None:
@@ -204,14 +215,17 @@ class PerformanceCounter:
         for process, counter_handle in process_counter_handle_pairs:
             counter_value = PDH_FMT_COUNTERVALUE()
             counter_type = ctypes.c_ulong()
-            self._assert_status(
-                self.pdh.PdhGetFormattedCounterValue(
-                    counter_handle,
-                    self.PDH_FMT_DOUBLE,
-                    ctypes.byref(counter_type),
-                    ctypes.byref(counter_value),
+            try:
+                self._assert_status(
+                    self.pdh.PdhGetFormattedCounterValue(
+                        counter_handle,
+                        self.PDH_FMT_DOUBLE,
+                        ctypes.byref(counter_type),
+                        ctypes.byref(counter_value),
+                    )
                 )
-            )
+            except:
+                pass
             pid = process.pid
             percent_value = counter_value.data.doubleValue / psutil.cpu_count(
                 logical=False

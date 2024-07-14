@@ -19,3 +19,6 @@ class PerformanceCounter:
 
     def get_pid_to_gpu_percent_map(self, pids: List[int]) -> Dict[int, float]:
         return {}
+
+    def invalidate_cache(self):
+        pass

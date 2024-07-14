@@ -23,6 +23,9 @@ def main():
     history = History(history_upperbound=config.history_upperbound)
     profiler = KProfiler(history=history, config=config)
     backend = KProfilerBackend(profiler, profiler.process_map, history)
+    profiler.subscribe_to_process_change(
+        lambda: profiler.worker.performance_counter.invalidate_cache()
+    )
     profiler.start()
 
     if profiler.config.realtime_diagram:
