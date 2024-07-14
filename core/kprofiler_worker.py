@@ -117,10 +117,17 @@ class KProfilerWorker:
         self.paused = False
 
     def _capture_profile(self, processes: List[psutil.Process]):
+        count = len(processes)
+
+        if self.should_stop:
+            return
+
+        if count == 0:
+            return
+
         pids = [process.pid for process in processes]
         pid_to_gpu_percent = self.get_pid_to_gpu_percent_map(pids)
         pid_to_cpu_percent = self.get_pid_to_cpu_percent_map(pids)
-        count = len(processes)
 
         cpu_percent_total = 0
         gpu_percent_total = 0
@@ -131,6 +138,9 @@ class KProfilerWorker:
         vms_mb_total = 0
         wset_mb_total = 0
         pwset_mb_total = 0
+
+        cpu_percents_system = psutil.cpu_percent(percpu=True)
+        overall_cpu_percent_system = sum(cpu_percents_system) / len(cpu_percents_system)
 
         for process in processes:
             memory_utilization = self.cpu_helper.query_process(process)
@@ -159,6 +169,21 @@ class KProfilerWorker:
                 cpu_percent=cpu_percent,
                 gpu_percent=gpu_percent,
             )
+
+        self.history.add_record(
+            process=ProcessKind(pid=4, name=self.config.target, label="整个系统"),
+            memory_utilization=MemoryUtilization(
+                system_total_memory_mb=system_total_memory_mb_total,
+                system_free_memory_mb=system_free_memory_mb_total,
+                uss_mb=uss_mb_total,
+                rss_mb=rss_mb_total,
+                vms_mb=vms_mb_total,
+                wset_mb=wset_mb_total,
+                pwset_mb=pwset_mb_total,
+            ),
+            cpu_percent=overall_cpu_percent_system,
+            gpu_percent=0,
+        )
 
         self.history.add_record(
             process=ProcessKind(pid=0, name=self.config.target, label="总值"),

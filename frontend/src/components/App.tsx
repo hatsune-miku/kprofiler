@@ -308,11 +308,18 @@ function App() {
       if (processes.length === 0) {
         return
       }
-      processes.unshift({
-        processId: 0,
-        name: "all",
-        label: "总值",
-      })
+      processes.unshift(
+        {
+          processId: 0,
+          name: "all",
+          label: "总值",
+        },
+        {
+          processId: 4,
+          name: "systemwide",
+          label: "整个系统",
+        }
+      )
       if (config.shouldShowTotalOnly) {
         processes = [processes[0]]
       }
@@ -362,10 +369,12 @@ function App() {
             {process.processId !== 0 && `(PID: ${process.processId})`}
           </Chip>
           <ReactECharts option={makeCpuGpuOptionFor(process)} />
-          <ReactECharts
-            option={makeMemoryOptionFor(process)}
-            style={{ marginTop: "36px" }}
-          />
+          {process.processId !== 4 && (
+            <ReactECharts
+              option={makeMemoryOptionFor(process)}
+              style={{ marginTop: "36px" }}
+            />
+          )}
         </div>
         <Divider className="divider" />
       </>
