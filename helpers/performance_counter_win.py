@@ -233,7 +233,7 @@ class PerformanceCounter:
             if pid not in self.cpu_process_recent_history:
                 self.cpu_process_recent_history[pid] = []
             self.cpu_process_recent_history[pid].append(percent_value)
-            percent_value = sum(self._get_recent_n_records(pid, 6))
+            percent_value = sum(self._get_recent_n_records(pid, 1))
             pid_to_cpu_percent_map[pid] = percent_value
 
         return pid_to_cpu_percent_map
