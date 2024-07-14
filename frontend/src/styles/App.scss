@@ -73,3 +73,11 @@
 .progress {
   font-size: 2.5em;
 }
+
+html,
+body,
+main,
+#root {
+  height: 100%;
+  background-color: $color-white;
+}
