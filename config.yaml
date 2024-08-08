@@ -52,7 +52,7 @@ advanced:
       label: 渲染进程
 
     - keyword: --type=crashpad-handler
-      label: crashpad-handler
+      label: 谷歌 Crashpad 异常处理进程 (crashpad-handler)
 
     - keyword: --type=utility
       label: utility
@@ -61,7 +61,7 @@ advanced:
       label: GPU 进程
 
     - keyword: km-event-child-process.js
-      label: km-event
+      label: 热键支持进程 (km-event)
 
     - keyword: logger-child-process.js
-      label: logger 进程
+      label: 日志进程 (logger)
