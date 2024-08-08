@@ -62,3 +62,6 @@ advanced:
 
     - keyword: km-event-child-process.js
       label: km-event
+
+    - keyword: logger-child-process.js
+      label: logger 进程
