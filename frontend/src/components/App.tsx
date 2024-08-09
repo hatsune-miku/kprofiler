@@ -510,7 +510,7 @@ function App() {
         </div>
         <div className="right-part">&#9825; KProfiler \^O^/</div>
       </div>
-      <Card className="data-card" key={count}>
+      <Card className="data-card">
         <div className="data-area">
           {dataPairs.map((pair, i) => (
             <div key={i} className="data-pair">
