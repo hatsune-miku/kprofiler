@@ -127,9 +127,9 @@ class KProfilerWorker:
 
         pids = [process.pid for process in processes]
         pid_to_gpu_percent = self.get_pid_to_gpu_percent_map(pids)
-        pid_to_cpu_percent = self.get_pid_to_cpu_percent_map(pids)
+        pid_to_cpu_percent = self.pid_to_cpu_percent_cache[0] # self.get_pid_to_cpu_percent_map(pids)
 
-        cpu_percent_total = 0
+        cpu_percent_total = pid_to_cpu_percent
         gpu_percent_total = 0
         system_total_memory_mb_total = 0
         system_free_memory_mb_total = 0
@@ -144,7 +144,7 @@ class KProfilerWorker:
 
         for process in processes:
             memory_utilization = self.cpu_helper.query_process(process)
-            cpu_percent = pid_to_cpu_percent.get(process.pid, 0)
+            cpu_percent = 0
             gpu_percent = pid_to_gpu_percent.get(process.pid, 0)
             process_kind = ProcessKind(
                 pid=process.pid,

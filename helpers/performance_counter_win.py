@@ -4,8 +4,81 @@ import re
 import psutil
 from typing import List, Dict, Tuple, NamedTuple
 
+import win32gui, win32ui
+from ctypes import windll
+import numpy as np
+import cv2
+import easyocr
+import re
+import time
+import pytesseract as tss
 
 PDH_MORE_DATA = 0x800007D2
+
+
+reader = easyocr.Reader(["ch_sim", "en"])
+
+
+def is_valid_percent_text(text: str) -> bool:
+    regex = r"^[0-9]+(\.[0-9]+)?%$"
+    return re.match(regex, text) is not None
+
+
+def read_cpu_percent(hwnd: int) -> float:
+    rect = win32gui.GetWindowRect(hwnd)
+    width, height = rect[2] - rect[0], rect[3] - rect[1]
+
+    hwnd_dc = win32gui.GetWindowDC(hwnd)
+    mfc_dc = win32ui.CreateDCFromHandle(hwnd_dc)
+    save_dc = mfc_dc.CreateCompatibleDC()
+    save_bitmap = win32ui.CreateBitmap()
+
+    save_bitmap.CreateCompatibleBitmap(mfc_dc, width, height)
+    save_dc.SelectObject(save_bitmap)
+
+    windll.user32.PrintWindow(hwnd, save_dc.GetSafeHdc(), 3)
+    bmpinfo = save_bitmap.GetInfo()
+    bmpstr = save_bitmap.GetBitmapBits(True)
+
+    capture = np.frombuffer(bmpstr, dtype=np.uint8).reshape(
+        (bmpinfo["bmHeight"], bmpinfo["bmWidth"], 4)
+    )
+    capture = np.ascontiguousarray(capture[..., :-1])
+
+    win32gui.DeleteObject(save_bitmap.GetHandle())
+    save_dc.DeleteDC()
+    mfc_dc.DeleteDC()
+    win32gui.ReleaseDC(hwnd, hwnd_dc)
+
+    capture = cv2.cvtColor(capture, cv2.COLOR_BGRA2GRAY)
+    capture = capture[233:273, 448:533]
+
+    blocks = reader.recognize(capture, allowlist="%.1234567890")
+    if len(blocks) != 1:
+        print(f"Invalid blocks: {blocks}")
+        return 0
+
+    box, text, confidence = blocks[0]
+    if not is_valid_percent_text(text):
+        print(f"Invalid text: {text}")
+        return 0
+
+    tss_text = ""
+    try:
+        tss_text = tss.image_to_string(capture, config="--psm 6").strip()
+    except:
+        print("tss failed")
+
+    if not is_valid_percent_text(tss_text):
+        print(f"Invalid tss text: {tss_text}")
+        return 0
+
+    print(f"Text: {text}")
+    print(f"tss: {tss_text}")
+
+    text_value = float(text[:-1])
+    tss_value = float(tss_text[:-1])
+    return min(text_value, tss_value)
 
 
 class COUNTERVALUE_DATA(ctypes.Union):
@@ -101,6 +174,15 @@ class PerformanceCounter:
             self.pdh.PdhOpenQueryA(None, None, ctypes.byref(self.gpu_query_handle))
         )
 
+        self.hwnd = win32gui.FindWindow(None, "任务管理器")
+        if self.hwnd == 0:
+            raise Exception("Task Manager not found")
+
+        rect = win32gui.GetWindowRect(self.hwnd)
+        width, height = rect[2] - rect[0], rect[3] - rect[1]
+        win32gui.ShowWindow(self.hwnd, 1)
+        win32gui.MoveWindow(self.hwnd, -114514, -114514, width, height, True)
+
     def __del__(self) -> None:
         try:
             self.pdh.PdhCloseQuery(self.cpu_query_handle)
@@ -180,6 +262,8 @@ class PerformanceCounter:
     def get_pid_to_cpu_percent_map(
         self, processes: List[psutil.Process]
     ) -> Dict[int, float]:
+        return { 0: read_cpu_percent(self.hwnd) }
+
         process_counter_handle_pairs: List[Tuple[psutil.Process, ctypes.c_void_p]] = []
         for i, process in enumerate(processes):
             name = process.name().strip(".exe")
