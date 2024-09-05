@@ -132,4 +132,4 @@ class KProfilerBackend:
         self.history.records.clear()
 
     def run(self):
-        uvicorn.run(self.app, host="0.0.0.0", port=6308)
+        uvicorn.run(self.app, host="0.0.0.0", port=6308, log_level="error")

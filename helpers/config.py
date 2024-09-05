@@ -25,6 +25,10 @@ class Config:
         return self["target"]
 
     @property
+    def tss_target(self) -> str:
+        return self["tss_target"]
+
+    @property
     def duration_millis(self) -> int:
         return self["duration_millis"]
 
@@ -51,6 +55,10 @@ class Config:
     @property
     def port(self) -> int:
         return self["advanced"]["port"]
+
+    @property
+    def tss_port(self) -> Optional[int]:
+        return self["advanced"]["tss_port"]
 
     @property
     def history_upperbound(self) -> int:

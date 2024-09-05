@@ -20,7 +20,6 @@ class KProfilerWorker:
         self.process_map = process_map
         self.history = history
         self.cpu_helper = CPUHelper()
-        self.performance_counter = PerformanceCounter()
         self.should_stop = False
         self.cpu_thread = None
         self.gpu_thread = None
@@ -28,6 +27,13 @@ class KProfilerWorker:
         self.pid_to_gpu_percent_cache = {}
         self.pid_to_cpu_percent_cache = {}
         self.paused = False
+
+        tss_port = config.tss_port
+        tss_featured_processes = config.tss_target
+        tss_arguments = [tss_port, tss_featured_processes]
+        self.performance_counter = PerformanceCounter(
+            self.config.cpu_duration_millis, tss_arguments
+        )
 
     def start(self) -> None:
         worker = self._make_worker()
@@ -99,6 +105,7 @@ class KProfilerWorker:
                 ret[pid] = self.pid_to_cpu_percent_cache[pid]
             else:
                 ret[pid] = 0
+        ret[0] = self.pid_to_cpu_percent_cache.get(0, 0)
         return ret
 
     def get_pid_to_gpu_percent_map(self, pids: List[int]) -> Dict[int, float]:
@@ -108,6 +115,7 @@ class KProfilerWorker:
                 ret[pid] = self.pid_to_gpu_percent_cache[pid]
             else:
                 ret[pid] = 0
+        ret[0] = self.pid_to_gpu_percent_cache.get(0, 0)
         return ret
 
     def pause(self):
@@ -129,8 +137,8 @@ class KProfilerWorker:
         pid_to_gpu_percent = self.get_pid_to_gpu_percent_map(pids)
         pid_to_cpu_percent = self.get_pid_to_cpu_percent_map(pids)
 
-        cpu_percent_total = 0
-        gpu_percent_total = 0
+        cpu_percent_total = pid_to_cpu_percent.get(0, 0)
+        gpu_percent_total = pid_to_gpu_percent.get(0, 0)
         system_total_memory_mb_total = 0
         system_free_memory_mb_total = 0
         uss_mb_total = 0
@@ -142,48 +150,49 @@ class KProfilerWorker:
         cpu_percents_system = psutil.cpu_percent(percpu=True)
         overall_cpu_percent_system = sum(cpu_percents_system) / len(cpu_percents_system)
 
-        for process in processes:
-            memory_utilization = self.cpu_helper.query_process(process)
-            cpu_percent = pid_to_cpu_percent.get(process.pid, 0)
-            gpu_percent = pid_to_gpu_percent.get(process.pid, 0)
-            process_kind = ProcessKind(
-                pid=process.pid,
-                name=self.config.target,
-                label=self.process_map.get_label(process.pid),
-            )
+        if not self.config.total_only:
+            for process in processes:
+                memory_utilization = self.cpu_helper.query_process(process)
+                cpu_percent = pid_to_cpu_percent.get(process.pid, 0)
+                gpu_percent = pid_to_gpu_percent.get(process.pid, 0)
+                process_kind = ProcessKind(
+                    pid=process.pid,
+                    name=self.config.target,
+                    label=self.process_map.get_label(process.pid),
+                )
 
-            system_total_memory_mb_total = memory_utilization.system_total_memory_mb
-            system_free_memory_mb_total = memory_utilization.system_free_memory_mb
+                system_total_memory_mb_total = memory_utilization.system_total_memory_mb
+                system_free_memory_mb_total = memory_utilization.system_free_memory_mb
 
-            cpu_percent_total += cpu_percent
-            gpu_percent_total += gpu_percent
-            uss_mb_total += memory_utilization.uss_mb
-            rss_mb_total += memory_utilization.rss_mb
-            vms_mb_total += memory_utilization.vms_mb
-            wset_mb_total += memory_utilization.wset_mb
-            pwset_mb_total += memory_utilization.pwset_mb
+                cpu_percent_total += cpu_percent
+                gpu_percent_total += gpu_percent
+                uss_mb_total += memory_utilization.uss_mb
+                rss_mb_total += memory_utilization.rss_mb
+                vms_mb_total += memory_utilization.vms_mb
+                wset_mb_total += memory_utilization.wset_mb
+                pwset_mb_total += memory_utilization.pwset_mb
+
+                self.history.add_record(
+                    process=process_kind,
+                    memory_utilization=memory_utilization,
+                    cpu_percent=cpu_percent,
+                    gpu_percent=gpu_percent,
+                )
 
             self.history.add_record(
-                process=process_kind,
-                memory_utilization=memory_utilization,
-                cpu_percent=cpu_percent,
-                gpu_percent=gpu_percent,
+                process=ProcessKind(pid=4, name=self.config.target, label="整个系统"),
+                memory_utilization=MemoryUtilization(
+                    system_total_memory_mb=system_total_memory_mb_total,
+                    system_free_memory_mb=system_free_memory_mb_total,
+                    uss_mb=uss_mb_total,
+                    rss_mb=rss_mb_total,
+                    vms_mb=vms_mb_total,
+                    wset_mb=wset_mb_total,
+                    pwset_mb=pwset_mb_total,
+                ),
+                cpu_percent=overall_cpu_percent_system,
+                gpu_percent=0,
             )
-
-        self.history.add_record(
-            process=ProcessKind(pid=4, name=self.config.target, label="整个系统"),
-            memory_utilization=MemoryUtilization(
-                system_total_memory_mb=system_total_memory_mb_total,
-                system_free_memory_mb=system_free_memory_mb_total,
-                uss_mb=uss_mb_total,
-                rss_mb=rss_mb_total,
-                vms_mb=vms_mb_total,
-                wset_mb=wset_mb_total,
-                pwset_mb=pwset_mb_total,
-            ),
-            cpu_percent=overall_cpu_percent_system,
-            gpu_percent=0,
-        )
 
         self.history.add_record(
             process=ProcessKind(pid=0, name=self.config.target, label="总值"),
