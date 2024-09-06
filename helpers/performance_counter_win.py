@@ -10,12 +10,16 @@ import json
 class PerformanceCounter:
     def __init__(self, tss_interval: int, tss_arguments: List[str]) -> None:
         tss_arguments.insert(0, "tss/TaskStatsServer.exe")
-        self.tss = subprocess.Popen(list(map(str, tss_arguments)))
+        self.tss_arguments = tss_arguments
+        self._launch_tss()
         self.pid_to_cpu_percent_map = {}
         self.pid_to_gpu_percent_map = {}
         self.tss_interval = tss_interval
         self.tss_port = tss_arguments[1]
         Thread(target=self._request_tss, daemon=True).start()
+
+    def _launch_tss(self):
+        self.tss = subprocess.Popen(list(map(str, self.tss_arguments)))
 
     def _request_tss(self):
         time.sleep(1)
@@ -24,15 +28,21 @@ class PerformanceCounter:
             try:
                 with urllib.request.urlopen(f"http://127.0.0.1:{self.tss_port}") as f:
                     data = f.read().decode("utf-8")
-                    json_data = json.loads(data)[0]  # TODO: 多进程支持
-                    self.pid_to_cpu_percent_map[0] = float(
-                        json_data["CPU"].replace("%", "").strip()
-                    )
-                    self.pid_to_gpu_percent_map[0] = float(
-                        json_data["GPU"].replace("%", "").strip()
-                    )
+                    processes = json.loads(data)
+                    for process in processes:
+                        try:
+                            pid = int(process["PID"])
+                            self.pid_to_cpu_percent_map[pid] = float(
+                                process["CPU"].replace("%", "").strip()
+                            )
+                            self.pid_to_gpu_percent_map[pid] = float(
+                                process["GPU"].replace("%", "").strip()
+                            )
+                        except Exception as e:
+                            print("无法解析 TaskStatsServer 数据", process, e)
+                            continue
             except Exception as e:
-                print("等待 TaskStatsServer 进程...", e)
+                exit(1)
 
     def invalidate_cache(self):
         pass

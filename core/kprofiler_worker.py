@@ -164,8 +164,6 @@ class KProfilerWorker:
                 system_total_memory_mb_total = memory_utilization.system_total_memory_mb
                 system_free_memory_mb_total = memory_utilization.system_free_memory_mb
 
-                cpu_percent_total += cpu_percent
-                gpu_percent_total += gpu_percent
                 uss_mb_total += memory_utilization.uss_mb
                 rss_mb_total += memory_utilization.rss_mb
                 vms_mb_total += memory_utilization.vms_mb

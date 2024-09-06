@@ -26,7 +26,7 @@ disable_gpu: false
 
 # 是否只看总值、忽略子进程，true 为开启，false 为关闭
 # 默认：false
-total_only: true
+total_only: false
 
 # 是否将监控结果写入日志文件，true 为开启，false 为关闭
 # 写出日志将会产生非常大的数据，会影响固态硬盘寿命
