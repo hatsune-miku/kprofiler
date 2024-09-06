@@ -6,6 +6,7 @@ from core.history import History
 from helpers.config import Config
 from server.backend import KProfilerBackend
 from threading import Thread
+from helpers.ctrl_c_kill import kill_on_ctrl_c
 import time
 import webbrowser
 
@@ -52,4 +53,5 @@ if __name__ == "__main__":
 ╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝╚══════╝╚═╝  ╚═╝
 """
     )
+    kill_on_ctrl_c()
     main()
