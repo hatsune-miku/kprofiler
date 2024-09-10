@@ -62,7 +62,7 @@ const GenericOptions: EChartsOption = {
 }
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [, setCount] = useState(0)
   const [lastUpdate, setLastUpdate] = useState(new Date())
   const darkMode = useDarkMode(false)
   const [minutesInput, setMinutesInput] = useState("")
@@ -73,6 +73,7 @@ function App() {
     onOpenChange: onConfirmOpenChanged,
   } = useDisclosure()
   const manualUpdate = () => setCount((prev) => prev + 1)
+  const [shouldShowTips, setShouldShowTips] = useState(true)
 
   function makeCpuGpuOptionFor(process: Process): EChartsOption {
     const processRecords = records.filter(
@@ -502,6 +503,40 @@ function App() {
       processes.map(makeProcessCard)
     )
 
+  if (shouldShowTips) {
+    return (
+      <div className="tips-main">
+        <span className="text-4xl font-bold text-[rgb(81,132,178)]">
+          开始之前...
+        </span>
+        <ul className="mt-4 text-[24px]">
+          <li>
+            请设置任务管理器{" "}
+            <span className="font-bold underline">默认起始页为“进程”页</span>{" "}
+            即第一页；
+          </li>
+          <li>
+            请确保任务管理器{" "}
+            <span className="font-bold underline">包含✅ PID, CPU 和 GPU</span>{" "}
+            这 3 列；
+          </li>
+          <li>
+            {" "}
+            请确保任务管理器{" "}
+            <span className="font-bold underline">不包含❌“GPU 引擎”</span> 列。
+          </li>
+        </ul>
+        <Button
+          className="mt-12"
+          color="danger"
+          onClick={() => setShouldShowTips(false)}
+        >
+          全部搞定！进入 KProfiler
+        </Button>
+      </div>
+    )
+  }
+
   return (
     <>
       <div className="header">
@@ -510,7 +545,7 @@ function App() {
         </div>
         <div className="right-part">&#9825; KProfiler \^O^/</div>
       </div>
-      <Card className="data-card" key={count}>
+      <Card className="data-card">
         <div className="data-area">
           {dataPairs.map((pair, i) => (
             <div key={i} className="data-pair">
