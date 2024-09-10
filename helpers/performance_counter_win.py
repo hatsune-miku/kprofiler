@@ -14,6 +14,7 @@ class PerformanceCounter:
         self._launch_tss()
         self.pid_to_cpu_percent_map = {}
         self.pid_to_gpu_percent_map = {}
+        self.pid_to_memory_mb_map = {}
         self.tss_interval = tss_interval
         self.tss_port = tss_arguments[1]
         Thread(target=self._request_tss, daemon=True).start()
@@ -38,6 +39,9 @@ class PerformanceCounter:
                             self.pid_to_gpu_percent_map[pid] = float(
                                 process["GPU"].replace("%", "").strip()
                             )
+                            self.pid_to_memory_mb_map[pid] = float(
+                                process["内存"].replace("MB", "").strip()
+                            )
                         except Exception as e:
                             print("无法解析 TaskStatsServer 数据", process, e)
                             continue
@@ -54,3 +58,6 @@ class PerformanceCounter:
 
     def get_pid_to_gpu_percent_map(self, pids: List[int]) -> Dict[int, float]:
         return self.pid_to_gpu_percent_map
+
+    def get_pid_to_memory_mb_map(self, pids: List[int]) -> Dict[int, float]:
+        return self.pid_to_memory_mb_map

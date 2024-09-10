@@ -9,14 +9,13 @@ window.global = globalThis
 
 export function Main() {
   const darkMode = useDarkMode(false)
+  const className = `${
+    darkMode.value ? "dark" : ""
+  } text-foreground bg-background main min-h-[100%]`
 
   return (
-    <NextUIProvider>
-      <main
-        className={`${
-          darkMode.value ? "dark" : ""
-        } text-foreground bg-background main`}
-      >
+    <NextUIProvider className={className}>
+      <main className={className}>
         <App />
       </main>
     </NextUIProvider>

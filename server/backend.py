@@ -90,6 +90,7 @@ class KProfilerBackend:
                         "virtualSize": record.memory_utilization.vms_mb,
                         "workingSet": record.memory_utilization.wset_mb,
                         "privateWorkingSet": record.memory_utilization.pwset_mb,
+                        "fromTaskmgr": record.memory_utilization.taskmgr_mb,
                         "systemTotal": record.memory_utilization.system_total_memory_mb,
                         "systemAvailable": record.memory_utilization.system_free_memory_mb,
                     },

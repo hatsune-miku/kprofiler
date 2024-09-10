@@ -63,6 +63,9 @@ export interface MemoryUtilization {
 
   /** Unit: MB */
   systemAvailable: number
+
+  /** Unit: MB */
+  fromTaskmgr: number
 }
 
 export interface Config {

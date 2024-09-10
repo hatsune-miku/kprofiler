@@ -12,6 +12,7 @@ import {
   Button,
   ButtonGroup,
   Card,
+  Checkbox,
   Chip,
   Divider,
   Input,
@@ -35,45 +36,53 @@ let processes: Process[] = []
 let config: Config = {} as Config
 let isPaused = false
 
-const GenericOptions: EChartsOption = {
-  animation: false,
-  dataZoom: {
-    type: "slider",
-    zoomOnMouseWheel: true,
-    maxValueSpan: 2000,
-  },
-  tooltip: {
-    trigger: "axis",
-    axisPointer: {
-      type: "cross",
-      label: {
-        backgroundColor: "rgb(213, 82, 118)",
-      },
-    },
-  },
-  toolbox: {
-    show: true,
-    feature: {
-      dataView: { readOnly: false },
-      restore: {},
-      saveAsImage: {},
-    },
-  },
-}
-
 function App() {
   const [, setCount] = useState(0)
   const [lastUpdate, setLastUpdate] = useState(new Date())
   const darkMode = useDarkMode(false)
   const [minutesInput, setMinutesInput] = useState("")
   const [pauseAt, setPauseAt] = useState(0)
+  const [dontNotifyAgain, setDontNotifyAgain] = useState(false)
   const {
     isOpen: shouldConfirmOpen,
     onOpen: openConfirm,
     onOpenChange: onConfirmOpenChanged,
   } = useDisclosure()
   const manualUpdate = () => setCount((prev) => prev + 1)
-  const [shouldShowTips, setShouldShowTips] = useState(true)
+  const [shouldShowTips, setShouldShowTips] = useState(
+    (localStorage.getItem("showTips") ?? "true") === "true"
+  )
+
+  function makeGenericOptions(): EChartsOption {
+    return {
+      animation: false,
+      dataZoom: {
+        type: "slider",
+        zoomOnMouseWheel: true,
+        maxValueSpan: 2000,
+      },
+      tooltip: {
+        trigger: "axis",
+        axisPointer: {
+          type: "cross",
+          label: {
+            backgroundColor: "rgb(213, 82, 118)",
+          },
+        },
+        backgroundColor: darkMode.value
+          ? "rgb(12, 12, 12)"
+          : "rgb(255, 255, 255)",
+      },
+      toolbox: {
+        show: true,
+        feature: {
+          dataView: { readOnly: false },
+          restore: {},
+          saveAsImage: {},
+        },
+      },
+    }
+  }
 
   function makeCpuGpuOptionFor(process: Process): EChartsOption {
     const processRecords = records.filter(
@@ -89,9 +98,13 @@ function App() {
       record.gpuPercentage.toFixed(2)
     )
     return {
-      ...GenericOptions,
+      ...makeGenericOptions(),
+      darkMode: darkMode.value,
       title: {
         text: "CPU & GPU 占用率",
+        textStyle: {
+          color: darkMode.value ? "#cfcfcf" : "#242424",
+        },
       },
       xAxis: {
         type: "category",
@@ -99,6 +112,11 @@ function App() {
       },
       yAxis: {
         type: "value",
+        splitLine: {
+          lineStyle: {
+            color: darkMode.value ? "#333" : "#dfdfdf",
+          },
+        },
       },
       series: [
         {
@@ -165,31 +183,37 @@ function App() {
       color: ["rgb(81, 132, 178)", "rgb(241, 167, 181)"],
       legend: {
         data: ["CPU %", "GPU %"],
+        textStyle: {
+          color: darkMode.value ? "#dfdfdf" : "#242424",
+        },
       },
     }
   }
 
   function makeMemoryOptionFor(process: Process): EChartsOption {
-    const processRecords = records.filter(
-      (record) => record.process.processId === process.processId
-    )
-    const timestamps = processRecords.map((record) =>
-      new Date(record.timestampSeconds * 1000).toDateString()
-    )
-    const ussValues = processRecords.map((record) =>
-      record.memoryUtilization.uniqueSetSize.toFixed(2)
-    )
-    const rssValues = processRecords.map((record) =>
-      record.memoryUtilization.residentSetSize.toFixed(2)
-    )
-    const vssValues = processRecords.map((record) =>
-      record.memoryUtilization.virtualSize.toFixed(2)
-    )
+    const extractItems = records
+      .filter((record) => record.process.processId === process.processId)
+      .map((record) => ({
+        timestamp: new Date(record.timestampSeconds * 1000).toDateString(),
+        ussValue: record.memoryUtilization.uniqueSetSize.toFixed(2),
+        rssValue: record.memoryUtilization.residentSetSize.toFixed(2),
+        vssValue: record.memoryUtilization.virtualSize.toFixed(2),
+        taskmgrValue: record.memoryUtilization.fromTaskmgr.toFixed(2),
+      }))
+    const timestamps = extractItems.map((v) => v.timestamp)
+    const ussValues = extractItems.map((v) => v.ussValue)
+    const rssValues = extractItems.map((v) => v.rssValue)
+    const vssValues = extractItems.map((v) => v.vssValue)
+    const taskmgrValues = extractItems.map((v) => v.taskmgrValue)
 
     return {
-      ...GenericOptions,
+      ...makeGenericOptions(),
+      darkMode: darkMode.value,
       title: {
         text: "内存占用 (MB)",
+        textStyle: {
+          color: darkMode.value ? "#cfcfcf" : "#242424",
+        },
       },
       xAxis: {
         type: "category",
@@ -197,8 +221,43 @@ function App() {
       },
       yAxis: {
         type: "value",
+        splitLine: {
+          lineStyle: {
+            color: darkMode.value ? "#333" : "#dfdfdf",
+          },
+        },
       },
       series: [
+        {
+          name: "Taskmgr",
+          data: taskmgrValues,
+          type: "line",
+          lineStyle: { color: "rgb(122, 204, 53)" },
+          large: true,
+          markLine: {
+            data: [
+              {
+                type: "average",
+                name: "平均值",
+                lineStyle: { color: "rgb(122, 204, 53)" },
+              },
+            ],
+          },
+          markPoint: {
+            data: [
+              {
+                type: "max",
+                name: "最大值",
+                itemStyle: { color: "rgb(122, 204, 53)" },
+              },
+              {
+                type: "min",
+                name: "最小值",
+                itemStyle: { color: "rgb(122, 204, 53)" },
+              },
+            ],
+          },
+        },
         {
           name: "USS",
           data: ussValues,
@@ -290,9 +349,17 @@ function App() {
           },
         },
       ],
-      color: ["rgb(213, 82, 118)", "rgb(230, 186, 60)", "rgb(170, 212, 248)"],
+      color: [
+        "rgb(122, 204, 53)",
+        "rgb(213, 82, 118)",
+        "rgb(230, 186, 60)",
+        "rgb(170, 212, 248)",
+      ],
       legend: {
-        data: ["USS", "RSS", "VSS"],
+        data: ["USS", "RSS", "VSS", "Taskmgr"],
+        textStyle: {
+          color: darkMode.value ? "#dfdfdf" : "#242424",
+        },
       },
     }
   }
@@ -478,7 +545,10 @@ function App() {
 
   const dataPairs = [
     { name: "最后更新", value: lastUpdate.toLocaleString() },
-    { name: "进程数量", value: processes.length },
+    {
+      name: "进程数量",
+      value: processes.filter((p) => p.processId > 4).length,
+    },
     { name: "总数据量", value: records.length },
     {
       name: "刷新间隔",
@@ -526,19 +596,32 @@ function App() {
             <span className="font-bold underline">不包含❌“GPU 引擎”</span> 列。
           </li>
         </ul>
-        <Button
-          className="mt-12"
-          color="danger"
-          onClick={() => setShouldShowTips(false)}
-        >
-          全部搞定！进入 KProfiler
-        </Button>
+        <div className="mt-12 flex flex-col justify-items-center items-center gap-[12px]">
+          <Checkbox
+            checked={dontNotifyAgain}
+            onChange={(e) => setDontNotifyAgain(e.target.checked)}
+            color="danger"
+          >
+            不再提示
+          </Checkbox>
+          <Button
+            color="danger"
+            onClick={() => {
+              if (dontNotifyAgain) {
+                localStorage.setItem("showTips", "false")
+              }
+              setShouldShowTips(false)
+            }}
+          >
+            全部搞定！进入 KProfiler
+          </Button>
+        </div>
       </div>
     )
   }
 
   return (
-    <>
+    <div>
       <div className="header">
         <div className="title">
           {config.targetProcessName} {isPaused && <Chip>已暂停更新</Chip>}
@@ -642,7 +725,7 @@ function App() {
           )}
         </ModalContent>
       </Modal>
-    </>
+    </div>
   )
 }
 

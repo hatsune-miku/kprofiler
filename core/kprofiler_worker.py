@@ -23,9 +23,11 @@ class KProfilerWorker:
         self.should_stop = False
         self.cpu_thread = None
         self.gpu_thread = None
+        self.memory_thread = None
         self.worker_thread = None
         self.pid_to_gpu_percent_cache = {}
         self.pid_to_cpu_percent_cache = {}
+        self.pid_to_memory_mb_cache = {}
         self.paused = False
 
         tss_port = config.tss_port
@@ -44,6 +46,10 @@ class KProfilerWorker:
         self.cpu_thread = Thread(target=cpu_worker, daemon=True)
         self.cpu_thread.start()
 
+        memory_worker = self._make_memory_worker()
+        self.memory_thread = Thread(target=memory_worker, daemon=True)
+        self.memory_thread.start()
+
         if not self.config.disable_gpu:
             gpu_worker = self._make_gpu_worker()
             self.gpu_thread = Thread(target=gpu_worker, daemon=True)
@@ -57,6 +63,10 @@ class KProfilerWorker:
 
     def set_process_map(self, process_map: ProcessMap) -> None:
         self.process_map = process_map
+
+    """
+    TODO: 这块的缓存写的太乱了！
+    """
 
     def _make_worker_routine(self, duration_millis: int, proc):
         def _routine():
@@ -88,6 +98,17 @@ class KProfilerWorker:
 
         return self._make_worker_routine(self.config.gpu_duration_millis, _proc)
 
+    def _make_memory_worker(self):
+        def _proc():
+            pid_to_memory = self.performance_counter.get_pid_to_memory_mb_map(
+                [p.pid for p in self.process_map.processes]
+            )
+            for pid, memory_mb in pid_to_memory.items():
+                self.pid_to_memory_mb_cache[pid] = memory_mb
+
+        # 故意使用的是 CPU 的时间间隔
+        return self._make_worker_routine(self.config.cpu_duration_millis, _proc)
+
     def _make_worker(self):
         def _proc():
             try:
@@ -97,6 +118,10 @@ class KProfilerWorker:
                 pass
 
         return self._make_worker_routine(self.config.duration_millis, _proc)
+
+    """
+    TODO: 这块的缓存写的太乱了！
+    """
 
     def get_pid_to_cpu_percent_map(self, pids: List[int]) -> Dict[int, float]:
         ret = {}
@@ -118,6 +143,16 @@ class KProfilerWorker:
         ret[0] = self.pid_to_gpu_percent_cache.get(0, 0)
         return ret
 
+    def get_pid_to_memory_mb_map(self, pids: List[int]) -> Dict[int, float]:
+        ret = {}
+        for pid in pids:
+            if pid in self.pid_to_memory_mb_cache:
+                ret[pid] = self.pid_to_memory_mb_cache[pid]
+            else:
+                ret[pid] = 0
+        ret[0] = self.pid_to_memory_mb_cache.get(0, 0)
+        return ret
+
     def pause(self):
         self.paused = True
 
@@ -136,9 +171,11 @@ class KProfilerWorker:
         pids = [process.pid for process in processes]
         pid_to_gpu_percent = self.get_pid_to_gpu_percent_map(pids)
         pid_to_cpu_percent = self.get_pid_to_cpu_percent_map(pids)
+        pid_to_memory_mb = self.get_pid_to_memory_mb_map(pids)
 
         cpu_percent_total = pid_to_cpu_percent.get(0, 0)
         gpu_percent_total = pid_to_gpu_percent.get(0, 0)
+        memory_mb_total = pid_to_memory_mb.get(0, 0)
         system_total_memory_mb_total = 0
         system_free_memory_mb_total = 0
         uss_mb_total = 0
@@ -153,6 +190,17 @@ class KProfilerWorker:
         if not self.config.total_only:
             for process in processes:
                 memory_utilization = self.cpu_helper.query_process(process)
+                memory_utilization = MemoryUtilization(
+                    system_total_memory_mb=memory_utilization.system_total_memory_mb,
+                    system_free_memory_mb=memory_utilization.system_free_memory_mb,
+                    taskmgr_mb=pid_to_memory_mb.get(process.pid, 0),
+                    uss_mb=memory_utilization.uss_mb,
+                    rss_mb=memory_utilization.rss_mb,
+                    vms_mb=memory_utilization.vms_mb,
+                    wset_mb=memory_utilization.wset_mb,
+                    pwset_mb=memory_utilization.pwset_mb,
+                )
+
                 cpu_percent = pid_to_cpu_percent.get(process.pid, 0)
                 gpu_percent = pid_to_gpu_percent.get(process.pid, 0)
                 process_kind = ProcessKind(
@@ -182,6 +230,7 @@ class KProfilerWorker:
                 memory_utilization=MemoryUtilization(
                     system_total_memory_mb=system_total_memory_mb_total,
                     system_free_memory_mb=system_free_memory_mb_total,
+                    taskmgr_mb=0,
                     uss_mb=uss_mb_total,
                     rss_mb=rss_mb_total,
                     vms_mb=vms_mb_total,
@@ -197,6 +246,7 @@ class KProfilerWorker:
             memory_utilization=MemoryUtilization(
                 system_total_memory_mb=system_total_memory_mb_total,
                 system_free_memory_mb=system_free_memory_mb_total,
+                taskmgr_mb=memory_mb_total,
                 uss_mb=uss_mb_total,
                 rss_mb=rss_mb_total,
                 vms_mb=vms_mb_total,

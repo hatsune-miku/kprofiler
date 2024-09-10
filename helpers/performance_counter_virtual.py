@@ -16,3 +16,6 @@ class PerformanceCounter:
 
     def get_pid_to_gpu_percent_map(self, pids: List[int]) -> Dict[int, float]:
         return {}
+
+    def get_pid_to_memory_mb_map(self, pids: List[int]) -> Dict[int, float]:
+        return {}

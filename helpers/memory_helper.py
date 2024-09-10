@@ -6,6 +6,7 @@ from .process_utils import ProcessUtils
 class MemoryUtilization(NamedTuple):
     system_total_memory_mb: float
     system_free_memory_mb: float
+    taskmgr_mb: float
     uss_mb: float
     rss_mb: float
     vms_mb: float
@@ -24,6 +25,7 @@ class CPUHelper:
         return MemoryUtilization(
             system_total_memory_mb=vm.total / 1024 / 1024,
             system_free_memory_mb=vm.free / 1024 / 1024,
+            taskmgr_mb=0,
             uss_mb=memory_info.uss / 1024 / 1024,
             rss_mb=memory_info.rss / 1024 / 1024,
             vms_mb=memory_info.vms / 1024 / 1024,
