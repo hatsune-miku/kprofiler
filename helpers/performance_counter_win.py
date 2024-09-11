@@ -5,6 +5,7 @@ import subprocess
 import time
 import urllib.request
 import json
+import sys
 
 
 class PerformanceCounter:
@@ -46,7 +47,7 @@ class PerformanceCounter:
                             print("无法解析 TaskStatsServer 数据", process, e)
                             continue
             except Exception as e:
-                exit(1)
+                print("无法连接 TaskStatsServer", e)
 
     def invalidate_cache(self):
         pass
