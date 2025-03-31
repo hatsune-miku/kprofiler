@@ -2,7 +2,11 @@ from fastapi import FastAPI, APIRouter, staticfiles
 from fastapi.middleware.cors import CORSMiddleware
 from core import kprofiler, process_map as pmap, history as phistory
 from pydantic import BaseModel
+import mimetypes
 import uvicorn
+
+mimetypes.add_type("application/javascript", ".js")
+mimetypes.add_type("text/css", ".css")
 
 
 class LoadHistoryRequest(BaseModel):

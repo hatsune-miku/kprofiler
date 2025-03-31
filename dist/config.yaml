@@ -1,0 +1,73 @@
+# =================
+# KProfiler 配置文件
+# =================
+
+# 监控目标进程名，大小写要注意区分
+target: KOOK.exe
+
+# TaskStatsServer 监控目标的关键词，逗号分开，逗号左右不要有空格
+tss_target: KOOK.exe,KOOK (32 位)
+
+# 每隔多少毫秒采样一次，不可低于 100 否则可能会导致采样失败
+# 默认：1000
+duration_millis: 1000
+
+# 页面多少毫秒更新一次，不可低于 100 否则页面可能刷新不出来
+# 默认：1000
+page_update_interval: 1000
+
+# 是否在监控过程中实时绘制图表，true 为开启，false 为关闭
+# 默认：true
+realtime_diagram: true
+
+# 是否停用 GPU 监控、换来更快的更新速度，true 为开启，false 为关闭
+# 默认：true
+disable_gpu: false
+
+# 是否只看总值、忽略子进程，true 为开启，false 为关闭
+# 默认：false
+total_only: false
+
+# 是否将监控结果写入日志文件，true 为开启，false 为关闭
+# 写出日志将会产生非常大的数据，会影响固态硬盘寿命
+# 默认：true
+write_logs: true
+
+# 以下为进阶配置
+advanced:
+  # 图表服务端口
+  # 默认：6308
+  port: 6308
+
+  # TaskStatsServer 端口
+  tss_port: 6309
+
+  # 内存中最多保留多少条记录
+  # TODO: 修一下这个量一带一路的问题
+  history_upperbound: 5000000
+
+  # 后台线程多久重新加载一次 GPU 百分比的数据，单位：毫秒
+  gpu_duration_millis: 1000
+
+  # 后台线程多久重新加载一次 CPU 百分比的数据，单位：毫秒
+  cpu_duration_millis: 1000
+
+  # 启动参数中包含什么样的关键字，将其标记为什么样的进程
+  label_criteria:
+    - keyword: --type=renderer
+      label: 渲染进程
+
+    - keyword: --type=crashpad-handler
+      label: 谷歌 Crashpad 异常处理进程 (crashpad-handler)
+
+    - keyword: --type=utility
+      label: utility
+
+    - keyword: --type=gpu-process
+      label: GPU 进程
+
+    - keyword: km-event-child-process.js
+      label: 热键支持进程 (km-event)
+
+    - keyword: logger-child-process.js
+      label: 日志进程 (logger)
