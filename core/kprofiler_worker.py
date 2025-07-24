@@ -28,6 +28,7 @@ class KProfilerWorker:
         self.pid_to_gpu_percent_cache = {}
         self.pid_to_cpu_percent_cache = {}
         self.pid_to_memory_mb_cache = {}
+        self.pid_to_vsize_mb_cache = {}
         self.paused = False
 
         tss_port = config.tss_port
@@ -49,6 +50,10 @@ class KProfilerWorker:
         memory_worker = self._make_memory_worker()
         self.memory_thread = Thread(target=memory_worker, daemon=True)
         self.memory_thread.start()
+
+        vsize_worker = self._make_vsize_worker()
+        self.vsize_thread = Thread(target=vsize_worker, daemon=True)
+        self.vsize_thread.start()
 
         if not self.config.disable_gpu:
             gpu_worker = self._make_gpu_worker()
@@ -109,6 +114,16 @@ class KProfilerWorker:
         # 故意使用的是 CPU 的时间间隔
         return self._make_worker_routine(self.config.cpu_duration_millis, _proc)
 
+    def _make_vsize_worker(self):
+        def _proc():
+            pid_to_vsize = self.performance_counter.get_pid_to_vsize_mb_map(
+                [p.pid for p in self.process_map.processes]
+            )
+            for pid, vsize_mb in pid_to_vsize.items():
+                self.pid_to_vsize_mb_cache[pid] = vsize_mb
+
+        return self._make_worker_routine(self.config.cpu_duration_millis, _proc)
+
     def _make_worker(self):
         def _proc():
             try:
@@ -153,6 +168,16 @@ class KProfilerWorker:
         ret[0] = self.pid_to_memory_mb_cache.get(0, 0)
         return ret
 
+    def get_pid_to_vsize_mb_map(self, pids: List[int]) -> Dict[int, float]:
+        ret = {}
+        for pid in pids:
+            if pid in self.pid_to_vsize_mb_cache:
+                ret[pid] = self.pid_to_vsize_mb_cache[pid]
+            else:
+                ret[pid] = 0
+        ret[0] = self.pid_to_vsize_mb_cache.get(0, 0)
+        return ret
+
     def pause(self):
         self.paused = True
 
@@ -172,6 +197,7 @@ class KProfilerWorker:
         pid_to_gpu_percent = self.get_pid_to_gpu_percent_map(pids)
         pid_to_cpu_percent = self.get_pid_to_cpu_percent_map(pids)
         pid_to_memory_mb = self.get_pid_to_memory_mb_map(pids)
+        pid_to_vsize = self.get_pid_to_vsize_mb_map(pids)
 
         cpu_percent_total = pid_to_cpu_percent.get(0, 0)
         gpu_percent_total = pid_to_gpu_percent.get(0, 0)
@@ -183,6 +209,7 @@ class KProfilerWorker:
         vms_mb_total = 0
         wset_mb_total = 0
         pwset_mb_total = 0
+        vsize_mb_total = 0
 
         cpu_percents_system = psutil.cpu_percent(percpu=True)
         overall_cpu_percent_system = sum(cpu_percents_system) / len(cpu_percents_system)
@@ -199,6 +226,7 @@ class KProfilerWorker:
                     vms_mb=memory_utilization.vms_mb,
                     wset_mb=memory_utilization.wset_mb,
                     pwset_mb=memory_utilization.pwset_mb,
+                    vsize=pid_to_vsize.get(process.pid, 0),
                 )
 
                 cpu_percent = pid_to_cpu_percent.get(process.pid, 0)
@@ -217,6 +245,7 @@ class KProfilerWorker:
                 vms_mb_total += memory_utilization.vms_mb
                 wset_mb_total += memory_utilization.wset_mb
                 pwset_mb_total += memory_utilization.pwset_mb
+                vsize_mb_total += memory_utilization.vsize
 
                 self.history.add_record(
                     process=process_kind,
@@ -236,6 +265,7 @@ class KProfilerWorker:
                     vms_mb=vms_mb_total,
                     wset_mb=wset_mb_total,
                     pwset_mb=pwset_mb_total,
+                    vsize=0,
                 ),
                 cpu_percent=overall_cpu_percent_system,
                 gpu_percent=0,
@@ -252,6 +282,7 @@ class KProfilerWorker:
                 vms_mb=vms_mb_total,
                 wset_mb=wset_mb_total,
                 pwset_mb=pwset_mb_total,
+                vsize=vsize_mb_total,
             ),
             cpu_percent=cpu_percent_total,
             gpu_percent=gpu_percent_total,

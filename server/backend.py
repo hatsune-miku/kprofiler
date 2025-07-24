@@ -97,6 +97,7 @@ class KProfilerBackend:
                         "fromTaskmgr": record.memory_utilization.taskmgr_mb,
                         "systemTotal": record.memory_utilization.system_total_memory_mb,
                         "systemAvailable": record.memory_utilization.system_free_memory_mb,
+                        "vsize": record.memory_utilization.vsize,
                     },
                 }
             )

@@ -12,6 +12,7 @@ class MemoryUtilization(NamedTuple):
     vms_mb: float
     wset_mb: float
     pwset_mb: float
+    vsize: float
 
 
 class CPUHelper:
@@ -31,6 +32,7 @@ class CPUHelper:
             vms_mb=memory_info.vms / 1024 / 1024,
             wset_mb=memory_info.wset / 1024 / 1024,
             pwset_mb=memory_info.private / 1024 / 1024,
+            vsize=0,
         )
 
     def query_process(self, process: psutil.Process) -> MemoryUtilization:

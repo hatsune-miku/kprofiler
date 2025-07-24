@@ -1,4 +1,4 @@
-@use "colors.scss" as *;
+@use 'colors.scss' as *;
 
 #root {
   margin: 0 auto;
@@ -20,6 +20,13 @@
 
   .right-part {
     font-size: 1rem;
+  }
+
+  .sub-button-area {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
   }
 }
 

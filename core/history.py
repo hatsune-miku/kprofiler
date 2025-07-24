@@ -32,6 +32,7 @@ class HistoryRecord(NamedTuple):
             "pwset_mb": self.memory_utilization.pwset_mb,
             "system_total_memory_mb": self.memory_utilization.system_total_memory_mb,
             "system_free_memory_mb": self.memory_utilization.system_free_memory_mb,
+            "vsize": self.memory_utilization.vsize,
         }
 
     def serialize(self) -> str:
@@ -55,6 +56,7 @@ class HistoryRecord(NamedTuple):
                 pwset_mb=float(values[11]),
                 system_total_memory_mb=float(values[12]),
                 system_free_memory_mb=float(values[13]),
+                vsize=float(values[14]),
             ),
         )
 
@@ -81,6 +83,7 @@ class History:
                 gpu_percent,
             )
         )
+
         if len(self.records) > self.history_upperbound:
             self.records = self.records[-self.history_upperbound :]
 

@@ -12,6 +12,7 @@ class MemoryUtilization(NamedTuple):
     vms_mb: float
     wset_mb: float
     pwset_mb: float
+    vsize: float
 
 
 class CPUHelper:

@@ -66,6 +66,9 @@ export interface MemoryUtilization {
 
   /** Unit: MB */
   fromTaskmgr: number
+
+  /** Unit: Bytes */
+  vsize: number
 }
 
 export interface Config {
@@ -90,7 +93,7 @@ export interface LabelCriterion {
 }
 
 const BaseUrl =
-  process.env.NODE_ENV === "development" ? "http://localhost:6308" : ""
+  process.env.NODE_ENV === 'development' ? 'http://localhost:6308' : ''
 
 async function get<T>(url: string, fallback: T): Promise<T> {
   try {
@@ -104,9 +107,9 @@ async function get<T>(url: string, fallback: T): Promise<T> {
 /* eslint-disable @typescript-eslint/no-explicit-any */
 async function post<R, T = any>(url: string, data: T): Promise<R> {
   const response = await fetch(BaseUrl + url, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify(data),
   })
@@ -114,7 +117,7 @@ async function post<R, T = any>(url: string, data: T): Promise<R> {
 }
 
 export async function getConfig(): Promise<Config> {
-  return await get<Config>("/api/config", {} as Config)
+  return await get<Config>('/api/config', {} as Config)
 }
 
 export async function getHistory(
@@ -127,21 +130,21 @@ export async function getHistory(
 }
 
 export async function getProcesses(): Promise<GetProcessesResponse> {
-  return await get<GetProcessesResponse>("/api/processes", {})
+  return await get<GetProcessesResponse>('/api/processes', {})
 }
 
 export async function downloadHistory(): Promise<RequestDownloadResponse> {
-  return await post<RequestDownloadResponse>("/api/download", {})
+  return await post<RequestDownloadResponse>('/api/download', {})
 }
 
 export async function loadHistory(fullHistory: string): Promise<void> {
-  await post<GetHistoryResponse>("/api/load", {
+  await post<GetHistoryResponse>('/api/load', {
     full_history: fullHistory,
   })
 }
 
 export async function requestClearHistory(): Promise<void> {
-  await post<void>("/api/clear", {})
+  await post<void>('/api/clear', {})
 }
 
 export const request = {

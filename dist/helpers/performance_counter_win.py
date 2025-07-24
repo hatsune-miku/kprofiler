@@ -3,7 +3,7 @@ import psutil
 from threading import Thread
 import subprocess
 import time
-import urllib.request
+import requests
 import json
 import sys
 
@@ -27,25 +27,24 @@ class PerformanceCounter:
         time.sleep(1)
         while True:
             time.sleep(self.tss_interval / 1000)
+            url = f"http://127.0.0.1:{self.tss_port}"
             try:
-                with urllib.request.urlopen(f"http://127.0.0.1:{self.tss_port}") as f:
-                    data = f.read().decode("utf-8")
-                    processes = json.loads(data)
-                    for process in processes:
-                        try:
-                            pid = int(process["PID"])
-                            self.pid_to_cpu_percent_map[pid] = float(
-                                process["CPU"].replace("%", "").strip()
-                            )
-                            self.pid_to_gpu_percent_map[pid] = float(
-                                process["GPU"].replace("%", "").strip()
-                            )
-                            self.pid_to_memory_mb_map[pid] = float(
-                                process["内存"].replace("MB", "").strip()
-                            )
-                        except Exception as e:
-                            print("无法解析 TaskStatsServer 数据", process, e)
-                            continue
+                processes = requests.get(url).json()
+                for process in processes:
+                    try:
+                        pid = int(process["PID"])
+                        self.pid_to_cpu_percent_map[pid] = float(
+                            process["CPU"].replace("%", "").strip()
+                        )
+                        self.pid_to_gpu_percent_map[pid] = float(
+                            process["GPU"].replace("%", "").strip()
+                        )
+                        self.pid_to_memory_mb_map[pid] = float(
+                            process["内存"].replace("MB", "").strip()
+                        )
+                    except Exception as e:
+                        print("无法解析 TaskStatsServer 数据", process, e)
+                        continue                    
             except Exception as e:
                 print("无法连接 TaskStatsServer", e)
 
